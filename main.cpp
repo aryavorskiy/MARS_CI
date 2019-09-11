@@ -5,12 +5,11 @@
 #include <sstream>
 
 #define VERSION "2.0.2";
-#define BUILD 0;
+#define BUILD 2;
 
 using namespace std;
 
 mutex outp_mutex;
-mutex macc_mutex;
 const int size = 400;
 const float threshold = 0.001;
 float pow_offset;
@@ -43,11 +42,8 @@ float hamiltonian(float *mat, float *sp) {
 
 float meanfield(float *mat, float *sp, int ind) { // Returns /Phi_ind
     float mf = 0;
-    for (int i = 0; i < size; ++i) {
-        //macc_mutex.lock();
+    for (int i = 0; i < size; ++i)
         mf += mat[ind * size + i] * sp[i];
-        //macc_mutex.unlock();
-    }
     return mf;
 }
 
@@ -166,13 +162,15 @@ int main() {
     float *J = new float[size * size];
     int *expon = new int[threads];
     bool *f = new bool[threads];
+    for (int i = 0; i < threads; ++i)
+        f[i] = true;
     srand(10);
     randmat(J);
     int launched = 0;
     double start_time = time(0);
     while (launched < quan)
         for (int i = 0; i < threads; i++)
-            if (f[i] || launched < threads) {
+            if (f[i] && launched < quan) {
                 f[i] = false;
                 randsp(&(x[size * i]));
                 randsp(&(y[size * i]));
@@ -181,7 +179,6 @@ int main() {
                        &(f[i]), &(expon[i])).detach();
                 launched++;
             }
-
     bool flag_wait = true;
     while (flag_wait) {
         flag_wait = false;
