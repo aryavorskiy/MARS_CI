@@ -2,7 +2,7 @@
 import subprocess
 import sys
 
-req_args = ['lambda', 'start', 'end', 'step', 'threads', 'points']
+req_args = ['lambda', 'start', 'end', 'step', 'threads', 'group_size', 'points']
 buff = ""
 args = {}
 for arg in sys.argv:
