@@ -9,7 +9,7 @@
 #include "MatriceLoader.h"
 
 #define VERSION "2.2";
-#define BUILD 5;
+#define BUILD 2;
 
 using namespace std;
 
@@ -170,6 +170,7 @@ int main() {
     cin >> step;
     cout << "Lattice type?" << endl;
     string loadModeStr = "";
+    cin >> loadModeStr;
     while (find(matLoadModeStr.begin(), matLoadModeStr.end(), loadModeStr) == matLoadModeStr.end()) {
         cout << "Expected one of following: ";
         for (string ltp : matLoadModeStr)
