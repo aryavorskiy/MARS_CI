@@ -4,17 +4,28 @@
 #include <mutex>
 #include <sstream>
 #include <vector>
+#include <algorithm>
 
-#define VERSION "2.1";
-#define BUILD 4;
+#include "MatriceLoader.h"
+
+#define VERSION "2.2";
+#define BUILD 5;
 
 using namespace std;
 
 mutex print_mutex;
-const int size = 400;
+int size;
 const float threshold = 0.001;
 float pow_offset;
 
+
+vector<string> matLoadModeStr{"RAND", "FILE_MAT", "FILE_LAT"};
+
+enum matLoadMode {
+    RAND,
+    FILE_MAT,
+    FILE_LAT
+};
 
 void randomize_sp(float *sp) {
     for (int i = 0; i < size; ++i) {
@@ -150,15 +161,47 @@ int main() {
     cout << endl;
     float temp = 10;
     float temp_f = 10;
-    cout << "Lambda decimal log?" << endl;
-    cin >> pow_offset;
     cout << "Start temp?" << endl;
     cin >> temp;
-    cout << "End temp?" << endl;
+    cout << "Final temp?" << endl;
     cin >> temp_f;
     float step = 0.01;
-    cout << "Step?" << endl;
+    cout << "Annealing step?" << endl;
     cin >> step;
+    cout << "Lattice type?" << endl;
+    string loadModeStr = "";
+    while (find(matLoadModeStr.begin(), matLoadModeStr.end(), loadModeStr) == matLoadModeStr.end()) {
+        cout << "Expected one of following: ";
+        for (string ltp : matLoadModeStr)
+            cout << ltp << ", ";
+        cout << endl;
+        cin >> loadModeStr;
+    }
+    matLoadMode loadMode;
+    float *J;
+    string filename;
+    switch ((int) (find(matLoadModeStr.begin(), matLoadModeStr.end(), loadModeStr) - matLoadModeStr.begin())) {
+        case 0:
+            // Random matrice
+            cout << "Matrice size?" << endl;
+            cin >> size;
+            J = new float[size * size];
+            srand(10);
+            randomize_mat(J);
+            break;
+        case 1:
+            // Load in matrice mode
+            cout << "File path?" << endl;
+            cin >> filename;
+            J = MatriceLoader::loadAsMatrice(filename, &size);
+            break;
+        case 2:
+            // Load in lattice mode
+            cout << "File path?" << endl;
+            cin >> filename;
+            J = MatriceLoader::loadAsMatrice(filename, &size);
+            break;
+    }
     cout << "Thread quantity?" << endl;
     int threads;
     cin >> threads;
@@ -168,14 +211,16 @@ int main() {
     cout << "Group quantity?" << endl;
     int quan;
     cin >> quan;
+    cout << "Lambda decimal log?" << endl;
+    cin >> pow_offset;
     auto *spinset_blocks = new float[size * gsize * threads];
-    auto *J = new float[size * size];
+
+    cout << "Matrice loaded, size: " << size << " (check)" << endl;
+
     int *expon = new int[threads];
     bool *f = new bool[threads];
     for (int i = 0; i < threads; ++i)
         f[i] = true;
-    srand(10);
-    randomize_mat(J);
     int launched = 0;
     double start_time = time(0);
     while (launched < quan)
