@@ -9,7 +9,7 @@
 #include "MatriceLoader.h"
 
 #define VERSION "2.2";
-#define BUILD 2;
+#define BUILD 3;
 
 using namespace std;
 

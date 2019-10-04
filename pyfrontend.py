@@ -21,6 +21,7 @@ elif not set(req_args).issubset(args.keys()):
 else:
     fout = open(args.get('file', 'data'), 'w')
     proc = subprocess.Popen(['./MARS_2'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
+    proc.stdout.readline()  # Skip description line
     for req_arg in req_args:
         print(proc.stdout.readline(), end="")
         proc.stdin.write(args[req_arg]+'\n')
