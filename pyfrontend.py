@@ -2,13 +2,13 @@
 import subprocess
 import sys
 
-req_args = ['start', 'end', 'step', 'lat_type', 'lat_arg', 'threads', 'group_size', 'groups', 'lambda']
+req_args = ['start', 'end', 'step', 'lat_type', 'lat_arg', 'threads', 'block_data', 'block_quan', 'links', 'lambda']
 buff = ""
 args = {}
 for arg in sys.argv:
-    argsp = arg.split(sep = "=", maxsplit = 2)
+    argsp = arg.split(sep="=", maxsplit=2)
     if len(argsp) == 2:
-        args.update({arg.split(sep = "=", maxsplit = 2)[0].replace("-", "") : arg.split(sep = "=",maxsplit = 2)[1]})
+        args.update({arg.split(sep="=", maxsplit=2)[0].replace("-", ""): arg.split(sep="=", maxsplit=2)[1]})
 
 if len(args) < len(req_args):
     print("ERROR: Too few arguments.\nRequired arguments:")
@@ -20,11 +20,12 @@ elif not set(req_args).issubset(args.keys()):
             print("Error: Missing argument definition for {}".format(arg))
 else:
     fout = open(args.get('file', 'data'), 'w')
-    proc = subprocess.Popen(['./MARS_2'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
+    proc = subprocess.Popen(['./MARS_2'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                            universal_newlines=True)
     proc.stdout.readline()  # Skip description line
     for req_arg in req_args:
         print(proc.stdout.readline(), end="")
-        proc.stdin.write(args[req_arg]+'\n')
+        proc.stdin.write(args[req_arg] + '\n')
         proc.stdin.flush()
     s = proc.stdout.readline()
     while s != '':

@@ -6,10 +6,18 @@
 #include <vector>
 #include <algorithm>
 
-#include "MatriceLoader.h"
+#include "InputLoader.h"
 
-#define VERSION "2.2";
-#define BUILD 3;
+#define VERSION "2.4";
+#define BUILD 2;
+
+/*
+ * TERMINOLOGY:
+ * Mat - describes J_ij lattice
+ * Set - describes system mean spin values at certain state
+ * Block - several sets which descend simultaneously and interact with each other
+ * Link - A std::vector describing set interaction in a block
+ */
 
 using namespace std;
 
@@ -20,12 +28,6 @@ float pow_offset;
 
 
 vector<string> matLoadModeStr{"RAND", "FILE_MAT", "FILE_LAT"};
-
-enum matLoadMode {
-    RAND,
-    FILE_MAT,
-    FILE_LAT
-};
 
 void randomize_sp(float *sp) {
     for (int i = 0; i < size; ++i) {
@@ -60,7 +62,7 @@ float meanfield(float *mat, float *sp, int ind) { // Returns /Phi_ind
 }
 
 float iprob(float *x, float *y, int ind) { // Returns P_ind
-    return (1 + x[ind] * y[ind]) / 2.;
+    return (1 + x[ind] * y[ind]) / 2.f;
 }
 
 void corr_float(float *mantissa, int *exponent) {
@@ -94,10 +96,10 @@ float diprob(float *x, float *y, int ind, int *expon) { // Returns dP / dx_ind
     return prob(x, y, expon) * y[ind] / (1 + x[ind] * y[ind]);
 }
 
-bool iterate(float *mat, float *sp_block, int run_active, vector<int> run_linked, int spin_index, float t, int *expon) {
+bool iterate(float *mat, float *sp_block, int run_active, vector<int> link, int spin_index, float t, int *expon) {
     float sf = 0;
     sf += meanfield(mat, &(sp_block[run_active * size]), spin_index);
-    for (int interaction : run_linked)
+    for (int interaction : link)
         sf -= diprob(&(sp_block[run_active * size]), &(sp_block[interaction * size]), spin_index, expon);
 
     float old = sp_block[run_active * size + spin_index];
@@ -109,7 +111,7 @@ bool iterate(float *mat, float *sp_block, int run_active, vector<int> run_linked
 }
 
 void anneal(float *mat, float *sp_block, int run_count, float temp, float step,
-            bool *thr_inactive, int *expon) {
+            bool *thr_inactive, int *expon, vector<vector<int>> allLinks) {
     int counter = 0;
     float t = temp;
     do {
@@ -122,7 +124,7 @@ void anneal(float *mat, float *sp_block, int run_count, float temp, float step,
             }
             for (int spin_index = 1; spin_index < size; ++spin_index) {
                 for (int run_index = 0; run_index < run_count; ++run_index) {
-                    if (iterate(mat, sp_block, run_index, run_index == 0 ? vector<int>{} : vector<int>{0},
+                    if (iterate(mat, sp_block, run_index, allLinks[run_index],
                                 spin_index, t, expon))
                         cont = true;
                 }
@@ -156,7 +158,7 @@ string getTimeString(double time) {
 }
 
 int main() {
-    cout << "MARS analysis by Yxbcvn410, CPU edition, version " << VERSION;
+    cout << "MARS analysis by A. Yavorski, CPU edition, version " << VERSION;
     cout << ", build " << BUILD;
     cout << endl;
     float temp = 10;
@@ -178,7 +180,6 @@ int main() {
         cout << endl;
         cin >> loadModeStr;
     }
-    matLoadMode loadMode;
     float *J;
     string filename;
     switch ((int) (find(matLoadModeStr.begin(), matLoadModeStr.end(), loadModeStr) - matLoadModeStr.begin())) {
@@ -194,47 +195,71 @@ int main() {
             // Load in matrice mode
             cout << "File path?" << endl;
             cin >> filename;
-            J = MatriceLoader::loadAsMatrice(filename, &size);
+            J = InputLoader::loadMatFromTable(filename, &size);
             break;
         case 2:
             // Load in lattice mode
             cout << "File path?" << endl;
             cin >> filename;
-            J = MatriceLoader::loadAsMatrice(filename, &size);
+            J = InputLoader::loadMatFromList(filename, &size);
             break;
     }
+    cout << "Matrice loaded, size: " << size << " (check)" << endl;
+
     cout << "Thread quantity?" << endl;
     int threads;
     cin >> threads;
-    cout << "Group size?" << endl;
-    int gsize;
-    cin >> gsize;
-    cout << "Group quantity?" << endl;
-    int quan;
-    cin >> quan;
-    cout << "Lambda decimal log?" << endl;
-    cin >> pow_offset;
-    auto *spinset_blocks = new float[size * gsize * threads];
 
-    cout << "Matrice loaded, size: " << size << " (check)" << endl;
+    cout << "Block file location? (Enter block size to create a random block)" << endl;
+    string groupFilename;
+    cin >> groupFilename;
+    int blockSize;
+    float *Blocks;
+    bool randomizeBlocks;
+    try {
+        blockSize = stoi(groupFilename);
+        Blocks = new float[size * blockSize * threads];
+        randomizeBlocks = true;
+    } catch (exception e) {
+        blockSize = InputLoader::loadBlock(groupFilename, new float[size * blockSize], size);
+        Blocks = new float[size * blockSize * threads];
+        randomizeBlocks = false;
+    }
+
+    cout << "Block quantity?" << endl;
+    int blockQuan;
+    cin >> blockQuan;
+
+    cout << "Links file location?" << endl;
+    string linksFilename;
+    cin >> linksFilename;
+    vector<vector<int>> allLinks = InputLoader::loadLinks(linksFilename);
+
+    cout << "Interaction coefficient (decimal log)?" << endl;
+    cin >> pow_offset;
+
 
     int *expon = new int[threads];
     bool *f = new bool[threads];
     for (int i = 0; i < threads; ++i)
         f[i] = true;
-    int launched = 0;
+    int launchedThrCount = 0;
     double start_time = time(0);
-    while (launched < quan)
+    while (launchedThrCount < blockQuan)
         for (int i = 0; i < threads; i++)
-            if (f[i] && launched < quan) {
+            if (f[i] && launchedThrCount < blockQuan) {
                 f[i] = false;
-                for (int j = 0; j < gsize; ++j)
-                    randomize_sp(&(spinset_blocks[size * gsize * i + size * j]));
+                if (randomizeBlocks)
+                    for (int j = 0; j < blockSize; ++j)
+                        randomize_sp(&(Blocks[size * blockSize * i + size * j]));
+                else
+                    InputLoader::loadBlock(groupFilename, Blocks + size * blockSize * i, size);
 
-                thread(anneal, J, &(spinset_blocks[size * gsize * i]), gsize,
-                       temp + (launched / (float) quan) * (temp_f - temp),
-                       step, &(f[i]), &(expon[i])).detach();
-                launched++;
+                // Launch new run on a separate thread
+                thread(anneal, J, &(Blocks[size * blockSize * i]), blockSize,
+                       temp + (launchedThrCount / (float) blockQuan) * (temp_f - temp),
+                       step, &(f[i]), &(expon[i]), allLinks).detach();
+                launchedThrCount++;
             }
 
     bool flag_wait = true;
