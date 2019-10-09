@@ -2,13 +2,13 @@
 #include <cmath>
 #include <thread>
 #include <mutex>
-#include <sstream>
 #include <vector>
 #include <algorithm>
 
 #include "InputLoader.h"
+#include "Annealing.h"
 
-#define VERSION "2.4";
+#define VERSION "2.5";
 #define BUILD 2;
 
 /*
@@ -20,127 +20,10 @@
  */
 
 using namespace std;
-
-mutex print_mutex;
-int size;
-const float threshold = 0.001;
-float pow_offset;
+using namespace Annealing;
 
 
-vector<string> matLoadModeStr{"RAND", "FILE_MAT", "FILE_LAT"};
-
-void randomize_sp(float *sp) {
-    for (int i = 0; i < size; ++i) {
-        sp[i] = rand() / (float) RAND_MAX * 2 - 1;
-    }
-}
-
-void randomize_mat(float *mat) {
-    for (int i = 0; i < size; ++i) {
-        for (int j = i + 1; j < size; ++j) {
-            float v = 2 * (float) rand() / (float) RAND_MAX - 1;
-            mat[i * size + j] = v;
-            mat[j * size + i] = v;
-        }
-        mat[i * size + i] = 0;
-    }
-}
-
-float hamiltonian(float *mat, float *sp) {
-    float ham = 0;
-    for (int i = 0; i < size; i++)
-        for (int j = i + 1; j < size; j++)
-            ham += sp[i] * sp[j] * mat[i * size + j];
-    return ham;
-}
-
-float meanfield(float *mat, float *sp, int ind) { // Returns /Phi_ind
-    float mf = 0;
-    for (int i = 0; i < size; ++i)
-        mf += mat[ind * size + i] * sp[i];
-    return mf;
-}
-
-float iprob(float *x, float *y, int ind) { // Returns P_ind
-    return (1 + x[ind] * y[ind]) / 2.f;
-}
-
-void corr_float(float *mantissa, int *exponent) {
-    if (*mantissa == 0) {
-        *exponent = 0;
-        return;
-    }
-    while (abs(*mantissa) > 10) {
-        *mantissa /= 10;
-        *exponent += 1;
-    }
-    while (abs(*mantissa) < 1) {
-        *mantissa *= 10;
-        *exponent -= 1;
-    }
-}
-
-float prob(float *x, float *y, int *expon) { // Returns P
-    float pr = 1;
-    *expon = 0;
-    for (int i = 0; i < size; ++i) {
-        pr *= iprob(x, y, i);
-        corr_float(&pr, expon);
-    }
-    return pr == 0 ? 0 : pr * exp10f((*expon + pow_offset));
-}
-
-float diprob(float *x, float *y, int ind, int *expon) { // Returns dP / dx_ind
-    if (1 + x[ind] * y[ind] == 0)
-        return 0;
-    return prob(x, y, expon) * y[ind] / (1 + x[ind] * y[ind]);
-}
-
-bool iterate(float *mat, float *sp_block, int run_active, vector<int> link, int spin_index, float t, int *expon) {
-    float sf = 0;
-    sf += meanfield(mat, &(sp_block[run_active * size]), spin_index);
-    for (int interaction : link)
-        sf -= diprob(&(sp_block[run_active * size]), &(sp_block[interaction * size]), spin_index, expon);
-
-    float old = sp_block[run_active * size + spin_index];
-    sp_block[run_active * size + spin_index] = t > 0 ? tanhf(-sf / t) :
-                                               sf > 0 ? -1 : 1;
-    return (sp_block[run_active * size + spin_index] - old > 0)
-           ? (sp_block[run_active * size + spin_index] - old > threshold)
-           : (old - sp_block[run_active * size + spin_index] > threshold);
-}
-
-void anneal(float *mat, float *sp_block, int run_count, float temp, float step,
-            bool *thr_inactive, int *expon, vector<vector<int>> allLinks) {
-    int counter = 0;
-    float t = temp;
-    do {
-        t -= step;
-        bool cont = true;
-        while (cont) {
-            cont = false;
-            for (int i = 0; i < run_count; ++i) {
-                sp_block[i * size] = 1;
-            }
-            for (int spin_index = 1; spin_index < size; ++spin_index) {
-                for (int run_index = 0; run_index < run_count; ++run_index) {
-                    if (iterate(mat, sp_block, run_index, allLinks[run_index],
-                                spin_index, t, expon))
-                        cont = true;
-                }
-            }
-            counter++;
-        }
-    } while (t > 0);
-    print_mutex.lock();
-    cout << temp;
-    for (int run_index = 0; run_index < run_count; ++run_index)
-        cout << " " << hamiltonian(mat, &(sp_block[run_index * size]));
-    cout << " [" << counter << " iterations]"
-         << endl;
-    print_mutex.unlock();
-    *thr_inactive = true;
-}
+vector<string> matLoadModeStr{"RAND", "FILE_TABLE", "FILE_LIST"};
 
 string getTimeString(double time) {
     if (time <= 0)
@@ -158,25 +41,25 @@ string getTimeString(double time) {
 }
 
 int main() {
-    cout << "MARS analysis by A. Yavorski, CPU edition, version " << VERSION;
-    cout << ", build " << BUILD;
+    cout << "MARS analysis by A. Yavorski, CPU edition, version " << VERSION
+    cout << ", build " << BUILD
     cout << endl;
-    float temp = 10;
-    float temp_f = 10;
+    float tempStart = 10;
+    float tempFinal = 10;
     cout << "Start temp?" << endl;
-    cin >> temp;
+    cin >> tempStart;
     cout << "Final temp?" << endl;
-    cin >> temp_f;
-    float step = 0.01;
+    cin >> tempFinal;
+    float annealingStep = 0.01;
     cout << "Annealing step?" << endl;
-    cin >> step;
+    cin >> annealingStep;
     cout << "Lattice type?" << endl;
-    string loadModeStr = "";
+    string loadModeStr;
     cin >> loadModeStr;
     while (find(matLoadModeStr.begin(), matLoadModeStr.end(), loadModeStr) == matLoadModeStr.end()) {
         cout << "Expected one of following: ";
-        for (string ltp : matLoadModeStr)
-            cout << ltp << ", ";
+        for (const string &loadMode : matLoadModeStr)
+            cout << loadMode << ", ";
         cout << endl;
         cin >> loadModeStr;
     }
@@ -184,51 +67,51 @@ int main() {
     string filename;
     switch ((int) (find(matLoadModeStr.begin(), matLoadModeStr.end(), loadModeStr) - matLoadModeStr.begin())) {
         case 0:
-            // Random matrice
-            cout << "Matrice size?" << endl;
+            // Random lattice
+            cout << "Lattice size?" << endl;
             cin >> size;
             J = new float[size * size];
             srand(10);
-            randomize_mat(J);
+            matRandomize(J);
             break;
         case 1:
-            // Load in matrice mode
+            // Load in table mode
             cout << "File path?" << endl;
             cin >> filename;
             J = InputLoader::loadMatFromTable(filename, &size);
             break;
         case 2:
-            // Load in lattice mode
+            // Load in list mode
             cout << "File path?" << endl;
             cin >> filename;
             J = InputLoader::loadMatFromList(filename, &size);
             break;
     }
-    cout << "Matrice loaded, size: " << size << " (check)" << endl;
+    cout << "Lattice loaded, size: " << size << " (check). ";
 
     cout << "Thread quantity?" << endl;
     int threads;
     cin >> threads;
 
     cout << "Block file location? (Enter block size to create a random block)" << endl;
-    string groupFilename;
-    cin >> groupFilename;
-    int blockSize;
+    string blockFilename;
+    cin >> blockFilename;
+    int blockSize = 0;
     float *Blocks;
     bool randomizeBlocks;
     try {
-        blockSize = stoi(groupFilename);
+        blockSize = stoi(blockFilename);
         Blocks = new float[size * blockSize * threads];
         randomizeBlocks = true;
-    } catch (exception e) {
-        blockSize = InputLoader::loadBlock(groupFilename, new float[size * blockSize], size);
+    } catch (exception &e) {
+        blockSize = InputLoader::loadBlock(blockFilename, new float[size * blockSize], size);
         Blocks = new float[size * blockSize * threads];
         randomizeBlocks = false;
     }
 
     cout << "Block quantity?" << endl;
-    int blockQuan;
-    cin >> blockQuan;
+    int blockQty;
+    cin >> blockQty;
 
     cout << "Links file location?" << endl;
     string linksFilename;
@@ -236,29 +119,29 @@ int main() {
     vector<vector<int>> allLinks = InputLoader::loadLinks(linksFilename);
 
     cout << "Interaction coefficient (decimal log)?" << endl;
-    cin >> pow_offset;
+    cin >> interactionQuotient;
 
 
-    int *expon = new int[threads];
+    int *glExpExternal = new int[threads];
     bool *f = new bool[threads];
     for (int i = 0; i < threads; ++i)
         f[i] = true;
     int launchedThrCount = 0;
-    double start_time = time(0);
-    while (launchedThrCount < blockQuan)
-        for (int i = 0; i < threads; i++)
-            if (f[i] && launchedThrCount < blockQuan) {
-                f[i] = false;
+    double start_time = time(nullptr);
+    while (launchedThrCount < blockQty)
+        for (int thrIndex = 0; thrIndex < threads; thrIndex++)
+            if (f[thrIndex] && launchedThrCount < blockQty) {
+                f[thrIndex] = false;
                 if (randomizeBlocks)
                     for (int j = 0; j < blockSize; ++j)
-                        randomize_sp(&(Blocks[size * blockSize * i + size * j]));
+                        setRandomize(&(Blocks[size * blockSize * thrIndex + size * j]));
                 else
-                    InputLoader::loadBlock(groupFilename, Blocks + size * blockSize * i, size);
+                    InputLoader::loadBlock(blockFilename, Blocks + size * blockSize * thrIndex, size);
 
                 // Launch new run on a separate thread
-                thread(anneal, J, &(Blocks[size * blockSize * i]), blockSize,
-                       temp + (launchedThrCount / (float) blockQuan) * (temp_f - temp),
-                       step, &(f[i]), &(expon[i]), allLinks).detach();
+                thread(anneal, J, &(Blocks[size * blockSize * thrIndex]), blockSize,
+                       tempStart + (launchedThrCount / (float) blockQty) * (tempFinal - tempStart),
+                       annealingStep, f + thrIndex, glExpExternal + thrIndex, allLinks).detach();
                 launchedThrCount++;
             }
 
@@ -268,5 +151,5 @@ int main() {
         for (int i = 0; i < threads; i++)
             flag_wait = (flag_wait || !f[i]);
     }
-    cout << "Calculations complete in " << getTimeString(time(0) - start_time) << endl;
+    cout << "Calculations complete in " << getTimeString(time(nullptr) - start_time) << endl;
 }
