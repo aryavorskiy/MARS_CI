@@ -2,7 +2,8 @@
 import subprocess
 import sys
 
-req_args = ['start', 'end', 'step', 'lat_type', 'lat_arg', 'threads', 'block_data', 'block_quan', 'links', 'lambda']
+req_args = ['start', 'end', 'step', 'lat_type', 'lat_arg', 'threads', 'block_data', 'block_qty', 'links', 'int_q',
+            'results']
 buff = ""
 args = {}
 for arg in sys.argv:
@@ -11,9 +12,10 @@ for arg in sys.argv:
         args.update({arg.split(sep="=", maxsplit=2)[0].replace("-", ""): arg.split(sep="=", maxsplit=2)[1]})
 
 if len(args) < len(req_args):
-    print("ERROR: Too few arguments.\nRequired arguments:")
+    print("ERROR: Too few arguments.\nMissing arguments:")
     for arg in req_args:
-        print(arg)
+        if list(args.keys()).count(arg) == 0:
+            print(arg)
 elif not set(req_args).issubset(args.keys()):
     for arg in req_args:
         if list(args.keys()).count(arg) == 0:

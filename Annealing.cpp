@@ -6,11 +6,18 @@
 #include <mutex>
 #include <cmath>
 #include <iostream>
+#include <fstream>
+#include <sstream>
 #include "Annealing.h"
 
+using namespace std;
+
+mutex resultWriteMutex;
 mutex printMutex;
 const float threshold = 0.001;
-using namespace std;
+ofstream resultWriter;
+bool writeResultsToFile = false;
+
 int Annealing::size = 100;
 float Annealing::interactionQuotient = 0;
 
@@ -26,6 +33,35 @@ void adjustPrecision(float *mantissa, int *exponent) {
     while (abs(*mantissa) < 1) {
         *mantissa *= 10;
         *exponent -= 1;
+    }
+}
+
+void Annealing::setUpResultWriting(string fileName) {
+    writeResultsToFile = true;
+    resultWriter = ofstream(fileName);
+}
+
+void writeLine(string line) {
+    resultWriter << line << "\n";
+}
+
+void writeBlock(float *mat, float *block, int blockSize) {
+    for (int i = 0; i < blockSize; ++i) {
+        resultWriter << "Set #" << i << "; Hamiltonian: "
+                     << Annealing::hamiltonian(mat, &(block[Annealing::size * i]))
+                     << "; Data:\n";
+        for (int j = 0; j < Annealing::size; ++j) {
+            resultWriter << block[i * blockSize + j] << " ";
+        }
+        resultWriter << endl;
+    }
+    resultWriter << endl;
+}
+
+void Annealing::onResultsWritten(string postfix) {
+    if (writeResultsToFile) {
+        resultWriter << postfix;
+        resultWriter.close();
     }
 }
 
@@ -100,6 +136,14 @@ Annealing::iterate(float *mat, float *block, int setIndex, const vector<int> &li
 
 void Annealing::anneal(float *mat, float *block, int blockSize, float temp, float step,
                        bool *thrInactive, int *expExternal, vector<vector<int>> allLinks) {
+    if (writeResultsToFile) {
+        resultWriteMutex.lock();
+        ostringstream sHeader = ostringstream();
+        sHeader << "Started processing block from temperature " << temp << ":";
+        writeLine(sHeader.str());
+        writeBlock(mat, block, blockSize);
+        resultWriteMutex.unlock();
+    }
     int counter = 0;
     float t = temp;
     do {
@@ -107,10 +151,7 @@ void Annealing::anneal(float *mat, float *block, int blockSize, float temp, floa
         bool cont = true;
         while (cont) {
             cont = false;
-            for (int i = 0; i < blockSize; ++i) {
-                block[i * size] = 1;
-            }
-            for (int spin_index = 1; spin_index < size; ++spin_index) {
+            for (int spin_index = 0; spin_index < size; ++spin_index) {
                 for (int run_index = 0; run_index < blockSize; ++run_index) {
                     if (iterate(mat, block, run_index, allLinks[run_index],
                                 spin_index, t, expExternal))
@@ -127,5 +168,14 @@ void Annealing::anneal(float *mat, float *block, int blockSize, float temp, floa
     cout << " [" << counter << " iterations]"
          << endl;
     printMutex.unlock();
+    if (writeResultsToFile) {
+        resultWriteMutex.lock();
+        ostringstream fHeader = ostringstream();
+        fHeader << "Finished processing block; Start temperature was " << temp << "; Took " << counter
+                << " iterations; block data:";
+        writeLine(fHeader.str());
+        writeBlock(mat, block, blockSize);
+        resultWriteMutex.unlock();
+    }
     *thrInactive = true;
 }

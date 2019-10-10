@@ -9,7 +9,7 @@
 #include "Annealing.h"
 
 #define VERSION "2.5";
-#define BUILD 2;
+#define BUILD 8;
 
 /*
  * TERMINOLOGY:
@@ -87,13 +87,11 @@ int main() {
             J = InputLoader::loadMatFromList(filename, &size);
             break;
     }
-    cout << "Lattice loaded, size: " << size << " (check). ";
-
-    cout << "Thread quantity?" << endl;
+    cout << "Lattice loaded, size: " << size << " (check). Thread quantity?" << endl;
     int threads;
     cin >> threads;
 
-    cout << "Block file location? (Enter block size to create a random block)" << endl;
+    cout << "Block file location (Enter block size to create a random block)?" << endl;
     string blockFilename;
     cin >> blockFilename;
     int blockSize = 0;
@@ -113,14 +111,23 @@ int main() {
     int blockQty;
     cin >> blockQty;
 
-    cout << "Links file location?" << endl;
+    cout << "Links file location (NONE for no interaction)?" << endl;
     string linksFilename;
     cin >> linksFilename;
-    vector<vector<int>> allLinks = InputLoader::loadLinks(linksFilename);
+    vector<vector<int>> allLinks;
+    if (linksFilename == "NONE")
+        allLinks = vector<vector<int>>(size, vector<int>{});
+    else
+        allLinks = InputLoader::loadLinks(linksFilename);
 
-    cout << "Interaction coefficient (decimal log)?" << endl;
+    cout << "Interaction quotient (decimal log)?" << endl;
     cin >> interactionQuotient;
 
+    cout << "File to save all results (NONE for no saving)?" << endl;
+    string resultsFileName;
+    cin >> resultsFileName;
+    if (resultsFileName != "NONE")
+        Annealing::setUpResultWriting(resultsFileName);
 
     int *glExpExternal = new int[threads];
     bool *f = new bool[threads];
@@ -151,5 +158,6 @@ int main() {
         for (int i = 0; i < threads; i++)
             flag_wait = (flag_wait || !f[i]);
     }
+    Annealing::onResultsWritten();
     cout << "Calculations complete in " << getTimeString(time(nullptr) - start_time) << endl;
 }

@@ -22,6 +22,10 @@ namespace Annealing {
     bool
     iterate(float *mat, float *block, int setIndex, const vector<int> &link, int spinIndex, float t, int *expExternal);
 
+    void setUpResultWriting(string fileName);
+
+    void onResultsWritten(string postfix = "");
+
     void setRandomize(float *setPtr);
 
     void matRandomize(float *matPtr);
