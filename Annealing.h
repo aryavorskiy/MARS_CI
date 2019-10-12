@@ -36,5 +36,4 @@ namespace Annealing {
                 vector<vector<int>> allLinks);
 }
 
-
 #endif //MARS_2_ANNEALING_H

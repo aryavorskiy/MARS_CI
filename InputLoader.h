@@ -50,22 +50,20 @@ public:
     static int loadBlock(const string &filename, float *blockAddr, int matSize) {
         // blockSize will be written; matSize - mat size
         auto ifs = ifstream(filename);
-        int blockSize, blockCount;
-        ifs >> blockSize >> blockCount;
+        int blockSize;
+        ifs >> blockSize;
+        string line;
+        getline(ifs, line);
 
-        // Read the block
-        for (int confIndex = 0; confIndex < blockSize; ++confIndex) {
-            string line;
+        for (int confIndex = 0; confIndex < blockSize; ++confIndex) { // Read the block
             getline(ifs, line);
-            if (line.empty())
-                confIndex -= 1; // Ignore empty line
-            else if (line == "RAND") {
-                // Randomize line
+            if (line.empty()) // Ignore empty line
+                confIndex -= 1;
+            else if (line == "RAND") { // Randomize line
                 for (int i = 0; i < matSize; ++i)
                     blockAddr[confIndex * matSize + i] = 2 * (float) rand() / (float) RAND_MAX - 1;
 
-            } else {
-                // Read line from line buffer
+            } else { // Read line from line buffer
                 stringstream lineParser(line);
                 for (int i = 0; i < matSize; ++i) {
                     float buf;
@@ -87,17 +85,25 @@ public:
         for (int lineIndex = 0; lineIndex < blockSize; ++lineIndex) {
             vector<int> links = vector<int>();
             getline(ifs, line);
-            stringstream lineParser = stringstream(line);
+            if (line == "EMPTY" || line == "NONE") { // Set interacts with no others
+                outAllLinks.push_back(links);
+                continue;
+            } else if (line == "ALL") { // Set interacts with every other except himself
+                for (int i = 0; i < blockSize; ++i)
+                    if (i != lineIndex)
+                        links.push_back(i);
+                outAllLinks.push_back(links);
+                continue;
+            }
+
+            stringstream lineParser = stringstream(line); // Line needs parsing
             for (int j = 0; j < blockSize; ++j) {
                 int buf;
                 try {
                     lineParser >> buf;
-                    if ((!links.empty() && buf == links.back()) || line == "EMPTY")
-                        j = blockSize;
-                    else
+                    if (links.empty() || buf != links.back()) // Duplicates are ignored
                         links.push_back(buf);
-                }
-                catch (exception &e) {
+                } catch (exception &e) { // Invalid line --> ignore
                     j = blockSize;
                 }
             }
@@ -106,8 +112,5 @@ public:
         return outAllLinks;
     }
 };
-
-
-
 
 #endif //MARS_2_INPUTLOADER_H

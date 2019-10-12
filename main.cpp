@@ -9,7 +9,7 @@
 #include "Annealing.h"
 
 #define VERSION "2.5";
-#define BUILD 8;
+#define BUILD 11;
 
 /*
  * TERMINOLOGY:
@@ -79,15 +79,17 @@ int main() {
             cout << "File path?" << endl;
             cin >> filename;
             J = InputLoader::loadMatFromTable(filename, &size);
+            cout << "Lattice loaded, size: " << size << " (check). ";
             break;
         case 2:
             // Load in list mode
             cout << "File path?" << endl;
             cin >> filename;
             J = InputLoader::loadMatFromList(filename, &size);
+            cout << "Lattice loaded, size: " << size << " (check). ";
             break;
     }
-    cout << "Lattice loaded, size: " << size << " (check). Thread quantity?" << endl;
+    cout << "Thread quantity?" << endl;
     int threads;
     cin >> threads;
 
@@ -102,9 +104,12 @@ int main() {
         Blocks = new float[size * blockSize * threads];
         randomizeBlocks = true;
     } catch (exception &e) {
-        blockSize = InputLoader::loadBlock(blockFilename, new float[size * blockSize], size);
+        auto ifs = ifstream(blockFilename);
+        ifs >> blockSize;
+        ifs.close();
         Blocks = new float[size * blockSize * threads];
         randomizeBlocks = false;
+        cout << "Block loaded, size: " << blockSize << " (check). ";
     }
 
     cout << "Block quantity?" << endl;
