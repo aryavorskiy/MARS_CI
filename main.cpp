@@ -9,7 +9,7 @@
 #include "Annealing.h"
 
 #define VERSION "2.5";
-#define BUILD 11;
+#define BUILD 12;
 
 /*
  * TERMINOLOGY:
@@ -146,7 +146,7 @@ int main() {
                 f[thrIndex] = false;
                 if (randomizeBlocks)
                     for (int j = 0; j < blockSize; ++j)
-                        setRandomize(&(Blocks[size * blockSize * thrIndex + size * j]));
+                        setRandomize(Blocks + size * blockSize * thrIndex + size * j);
                 else
                     InputLoader::loadBlock(blockFilename, Blocks + size * blockSize * thrIndex, size);
 

@@ -46,12 +46,12 @@ void writeLine(string line) {
 }
 
 void writeBlock(float *mat, float *block, int blockSize) {
-    for (int i = 0; i < blockSize; ++i) {
-        resultWriter << "Set #" << i << "; Hamiltonian: "
-                     << Annealing::hamiltonian(mat, &(block[Annealing::size * i]))
+    for (int setIndex = 0; setIndex < blockSize; ++setIndex) {
+        resultWriter << "Set #" << setIndex << "; Hamiltonian: "
+                     << Annealing::hamiltonian(mat, &(block[Annealing::size * setIndex]))
                      << "; Data:\n";
         for (int j = 0; j < Annealing::size; ++j) {
-            resultWriter << block[i * blockSize + j] << " ";
+            resultWriter << block[setIndex * Annealing::size + j] << " ";
         }
         resultWriter << endl;
     }
