@@ -14,9 +14,9 @@ using namespace std;
 
 mutex resultWriteMutex;
 mutex printMutex;
+bool writeResultsToFile = false;
 const float threshold = 0.001;
 ofstream resultWriter;
-bool writeResultsToFile = false;
 
 int Annealing::size = 100;
 float Annealing::interactionQuotient = 0;
@@ -41,11 +41,11 @@ void Annealing::setUpResultWriting(string fileName) {
     resultWriter = ofstream(fileName);
 }
 
-void writeLine(string line) {
+void Annealing::writeLine(string line) {
     resultWriter << line << "\n";
 }
 
-void writeBlock(float *mat, float *block, int blockSize) {
+void Annealing::writeBlock(float *mat, float *block, int blockSize) {
     for (int setIndex = 0; setIndex < blockSize; ++setIndex) {
         resultWriter << "Set #" << setIndex << "; Hamiltonian: "
                      << Annealing::hamiltonian(mat, &(block[Annealing::size * setIndex]))
@@ -129,7 +129,7 @@ Annealing::iterate(float *mat, float *block, int setIndex, const vector<int> &li
     float old = block[setIndex * size + spinIndex];
     block[setIndex * size + spinIndex] = t > 0 ? tanhf(-sf / t) :
                                          sf > 0 ? -1 : 1;
-    return (block[setIndex * size + spinIndex] - old > 0)
+    return (block[setIndex * size + spinIndex] - old > 0) // Return true if annealing not complete
            ? (block[setIndex * size + spinIndex] - old > threshold)
            : (old - block[setIndex * size + spinIndex] > threshold);
 }
@@ -151,10 +151,10 @@ void Annealing::anneal(float *mat, float *block, int blockSize, float temp, floa
         bool cont = true;
         while (cont) {
             cont = false;
-            for (int spin_index = 0; spin_index < size; ++spin_index) {
-                for (int run_index = 0; run_index < blockSize; ++run_index) {
-                    if (iterate(mat, block, run_index, allLinks[run_index],
-                                spin_index, t, expExternal))
+            for (int spinIndex = 0; spinIndex < size; ++spinIndex) {
+                for (int setIndex = 0; setIndex < blockSize; ++setIndex) {
+                    if (iterate(mat, block, setIndex, allLinks[setIndex],
+                                spinIndex, t, expExternal))
                         cont = true;
                 }
             }

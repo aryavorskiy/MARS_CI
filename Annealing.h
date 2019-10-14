@@ -7,6 +7,10 @@
 
 using namespace std;
 
+extern mutex resultWriteMutex;
+extern mutex printMutex;
+extern bool writeResultsToFile;
+
 namespace Annealing {
     extern int size;
     extern float interactionQuotient;
@@ -34,6 +38,10 @@ namespace Annealing {
 
     void anneal(float *mat, float *block, int blockSize, float temp, float step, bool *thrInactive, int *expExternal,
                 vector<vector<int>> allLinks);
+
+    void writeLine(string line);
+
+    void writeBlock(float *mat, float *block, int blockSize);
 }
 
 #endif //MARS_2_ANNEALING_H

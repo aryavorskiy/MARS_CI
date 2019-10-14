@@ -6,7 +6,7 @@
 #include <algorithm>
 
 #include "InputLoader.h"
-#include "Annealing.h"
+#include "MultiThreadedAnnealing.h"
 
 #define VERSION "2.5";
 #define BUILD 12;
