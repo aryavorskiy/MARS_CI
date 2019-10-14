@@ -48,7 +48,7 @@ void writeLine(string line) {
 void writeBlock(float *mat, float *block, int blockSize) {
     for (int setIndex = 0; setIndex < blockSize; ++setIndex) {
         resultWriter << "Set #" << setIndex << "; Hamiltonian: "
-                     << Annealing::hamiltonian(mat, &(block[Annealing::size * setIndex]))
+                     << Annealing::hamiltonian(mat, block + Annealing::size * setIndex)
                      << "; Data:\n";
         for (int j = 0; j < Annealing::size; ++j) {
             resultWriter << block[setIndex * Annealing::size + j] << " ";
@@ -122,9 +122,9 @@ bool
 Annealing::iterate(float *mat, float *block, int setIndex, const vector<int> &link, int spinIndex, float t,
                    int *expExternal) {
     float sf = 0;
-    sf += meanField(mat, &(block[setIndex * size]), spinIndex);
+    sf += meanField(mat, block + setIndex * size, spinIndex);
     for (int interaction : link)
-        sf -= probDXi(&(block[setIndex * size]), &(block[interaction * size]), spinIndex, expExternal);
+        sf -= probDXi(block + setIndex * size, block + interaction * size, spinIndex, expExternal);
 
     float old = block[setIndex * size + spinIndex];
     block[setIndex * size + spinIndex] = t > 0 ? tanhf(-sf / t) :
@@ -151,10 +151,10 @@ void Annealing::anneal(float *mat, float *block, int blockSize, float temp, floa
         bool cont = true;
         while (cont) {
             cont = false;
-            for (int spin_index = 0; spin_index < size; ++spin_index) {
-                for (int run_index = 0; run_index < blockSize; ++run_index) {
-                    if (iterate(mat, block, run_index, allLinks[run_index],
-                                spin_index, t, expExternal))
+            for (int spinIndex = 0; spinIndex < size; ++spinIndex) {
+                for (int setIndex = 0; setIndex < blockSize; ++setIndex) {
+                    if (iterate(mat, block, setIndex, allLinks[setIndex],
+                                spinIndex, t, expExternal))
                         cont = true;
                 }
             }
@@ -163,8 +163,14 @@ void Annealing::anneal(float *mat, float *block, int blockSize, float temp, floa
     } while (t > 0);
     printMutex.lock();
     cout << temp;
-    for (int run_index = 0; run_index < blockSize; ++run_index)
-        cout << " " << hamiltonian(mat, &(block[run_index * size]));
+    bool noInteraction = true;
+    for (vector<int> link : allLinks)
+        noInteraction = noInteraction || link.empty();
+    for (int setIndex = 0; setIndex < blockSize; ++setIndex)
+        if (!(allLinks[setIndex].empty() || noInteraction))
+            cout << " " << hamiltonian(mat, block + setIndex * size);
+        else
+            cout << " <" << hamiltonian(mat, block + setIndex * size) << ">";
     cout << " [" << counter << " iterations]"
          << endl;
     printMutex.unlock();

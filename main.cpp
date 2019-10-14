@@ -9,7 +9,7 @@
 #include "Annealing.h"
 
 #define VERSION "2.5";
-#define BUILD 12;
+#define BUILD 13;
 
 /*
  * TERMINOLOGY:
@@ -135,15 +135,15 @@ int main() {
         Annealing::setUpResultWriting(resultsFileName);
 
     int *glExpExternal = new int[threads];
-    bool *f = new bool[threads];
-    for (int i = 0; i < threads; ++i)
-        f[i] = true;
+    bool *runningFlags = new bool[threads];
+    for (int thrIndex = 0; thrIndex < threads; ++thrIndex)
+        runningFlags[thrIndex] = true;
     int launchedThrCount = 0;
-    double start_time = time(nullptr);
+    double startTime = time(nullptr);
     while (launchedThrCount < blockQty)
         for (int thrIndex = 0; thrIndex < threads; thrIndex++)
-            if (f[thrIndex] && launchedThrCount < blockQty) {
-                f[thrIndex] = false;
+            if (runningFlags[thrIndex] && launchedThrCount < blockQty) {
+                runningFlags[thrIndex] = false;
                 if (randomizeBlocks)
                     for (int j = 0; j < blockSize; ++j)
                         setRandomize(Blocks + size * blockSize * thrIndex + size * j);
@@ -151,18 +151,18 @@ int main() {
                     InputLoader::loadBlock(blockFilename, Blocks + size * blockSize * thrIndex, size);
 
                 // Launch new run on a separate thread
-                thread(anneal, J, &(Blocks[size * blockSize * thrIndex]), blockSize,
+                thread(anneal, J, Blocks + size * blockSize * thrIndex, blockSize,
                        tempStart + (launchedThrCount / (float) blockQty) * (tempFinal - tempStart),
-                       annealingStep, f + thrIndex, glExpExternal + thrIndex, allLinks).detach();
+                       annealingStep, runningFlags + thrIndex, glExpExternal + thrIndex, allLinks).detach();
                 launchedThrCount++;
             }
 
-    bool flag_wait = true;
-    while (flag_wait) {
-        flag_wait = false;
+    bool runningFlag = true;
+    while (runningFlag) {
+        runningFlag = false;
         for (int i = 0; i < threads; i++)
-            flag_wait = (flag_wait || !f[i]);
+            runningFlag = (runningFlag || !runningFlags[i]);
     }
     Annealing::onResultsWritten();
-    cout << "Calculations complete in " << getTimeString(time(nullptr) - start_time) << endl;
+    cout << "Calculations complete in " << getTimeString(time(nullptr) - startTime) << endl;
 }
