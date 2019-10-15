@@ -22,7 +22,7 @@ elif not set(req_args).issubset(args.keys()):
             print("Error: Missing argument definition for {}".format(arg))
 else:
     fout = open(args.get('file', 'data'), 'w')
-    proc = subprocess.Popen(['./MARS_2'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+    proc = subprocess.Popen(['./MARS_CI'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                             universal_newlines=True)
     proc.stdout.readline()  # Skip description line
     for req_arg in req_args:

@@ -20,11 +20,12 @@ namespace Annealing {
     float probDXi(float *setX, float *setY, int spinIndex, int *expExternal);
 
     bool
-    iterate(float *mat, float *block, int setIndex, const vector<int> &link, int spinIndex, float t, int *expExternal);
+    iterate(float *mat, float *block, int setIndex, const vector<int> &link, int spinIndex, float currentTemp,
+            int *expExternal);
 
-    void setUpResultWriting(string fileName);
+    void setUpResultWriting(const string &fileName);
 
-    void onResultsWritten(string postfix = "");
+    void onResultsWritten(const string &postfix = "");
 
     void setRandomize(float *setPtr);
 
@@ -32,7 +33,8 @@ namespace Annealing {
 
     float hamiltonian(const float *mat, const float *set);
 
-    void anneal(float *mat, float *block, int blockSize, float temp, float step, bool *thrInactive, int *expExternal,
+    void anneal(float *mat, float *block, int blockSize, float startTemp, float tempStep, bool *thrInactive,
+                int *expExternal,
                 vector<vector<int>> allLinks);
 }
 

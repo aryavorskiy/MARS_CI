@@ -36,12 +36,12 @@ void adjustPrecision(float *mantissa, int *exponent) {
     }
 }
 
-void Annealing::setUpResultWriting(string fileName) {
+void Annealing::setUpResultWriting(const string &fileName) {
     writeResultsToFile = true;
     resultWriter = ofstream(fileName);
 }
 
-void writeLine(string line) {
+void writeLine(const string &line) {
     resultWriter << line << "\n";
 }
 
@@ -58,7 +58,7 @@ void writeBlock(float *mat, float *block, int blockSize) {
     resultWriter << endl;
 }
 
-void Annealing::onResultsWritten(string postfix) {
+void Annealing::onResultsWritten(const string &postfix) {
     if (writeResultsToFile) {
         resultWriter << postfix;
         resultWriter.close();
@@ -74,28 +74,28 @@ void Annealing::setRandomize(float *setPtr) {
 void Annealing::matRandomize(float *matPtr) {
     for (int i = 0; i < size; ++i) {
         for (int j = i + 1; j < size; ++j) {
-            float v = 2 * (float) rand() / (float) RAND_MAX - 1;
-            matPtr[i * size + j] = v;
-            matPtr[j * size + i] = v;
+            float val = 2 * (float) rand() / (float) RAND_MAX - 1;
+            matPtr[i * size + j] = val;
+            matPtr[j * size + i] = val;
         }
         matPtr[i * size + i] = 0;
     }
 }
 
-float Annealing::hamiltonian(const float *mat, const float *set) {
-    float ham = 0;
+float Annealing::hamiltonian(const float *mat, const float *set) { // Returns hamiltonian of given system
+    float hamiltonian = 0;
     for (int i = 0; i < size; i++)
         for (int j = i + 1; j < size; j++)
-            ham += set[i] * set[j] * mat[i * size + j];
-    return ham;
+            hamiltonian += set[i] * set[j] * mat[i * size + j];
+    return hamiltonian;
 }
 
 
 float Annealing::meanField(const float *mat, const float *set, int spinIndex) { // Returns /Phi_ind
-    float mf = 0;
+    float meanField = 0;
     for (int i = 0; i < size; ++i)
-        mf += mat[spinIndex * size + i] * set[i];
-    return mf;
+        meanField += mat[spinIndex * size + i] * set[i];
+    return meanField;
 }
 
 float Annealing::probXi(const float *setX, const float *setY, int spinIndex) { // Returns P_ind
@@ -103,13 +103,13 @@ float Annealing::probXi(const float *setX, const float *setY, int spinIndex) { /
 }
 
 float Annealing::prob(float *setX, float *setY, int *expExternal) { // Returns P
-    float pr = 1;
+    float eqProbability = 1;
     *expExternal = 0;
     for (int i = 0; i < size; ++i) {
-        pr *= probXi(setX, setY, i);
-        adjustPrecision(&pr, expExternal);
+        eqProbability *= probXi(setX, setY, i);
+        adjustPrecision(&eqProbability, expExternal);
     }
-    return pr == 0 ? 0 : pr * exp10f((*expExternal + interactionQuotient));
+    return eqProbability == 0 ? 0 : eqProbability * exp10f(((float) *expExternal + interactionQuotient));
 }
 
 float Annealing::probDXi(float *setX, float *setY, int spinIndex, int *expExternal) { // Returns dP / dx_ind
@@ -119,50 +119,59 @@ float Annealing::probDXi(float *setX, float *setY, int spinIndex, int *expExtern
 }
 
 bool
-Annealing::iterate(float *mat, float *block, int setIndex, const vector<int> &link, int spinIndex, float t,
+Annealing::iterate(float *mat, float *block, int setIndex, const vector<int> &link, int spinIndex, float currentTemp,
                    int *expExternal) {
-    float sf = 0;
-    sf += meanField(mat, block + setIndex * size, spinIndex);
+    float totalField = 0;
+    totalField += meanField(mat, block + setIndex * size, spinIndex);
     for (int interaction : link)
-        sf -= probDXi(block + setIndex * size, block + interaction * size, spinIndex, expExternal);
+        totalField -= probDXi(block + setIndex * size, block + interaction * size, spinIndex, expExternal);
 
     float old = block[setIndex * size + spinIndex];
-    block[setIndex * size + spinIndex] = t > 0 ? tanhf(-sf / t) :
-                                         sf > 0 ? -1 : 1;
+    block[setIndex * size + spinIndex] = currentTemp > 0 ? tanhf(-totalField / currentTemp) :
+                                         totalField > 0 ? -1 : 1;
     return (block[setIndex * size + spinIndex] - old > 0)
            ? (block[setIndex * size + spinIndex] - old > threshold)
            : (old - block[setIndex * size + spinIndex] > threshold);
 }
 
-void Annealing::anneal(float *mat, float *block, int blockSize, float temp, float step,
+void Annealing::anneal(float *mat, float *block, int blockSize, float startTemp, float tempStep,
                        bool *thrInactive, int *expExternal, vector<vector<int>> allLinks) {
-    if (writeResultsToFile) {
+    if (writeResultsToFile) { // Block annealing started, write to full log
         resultWriteMutex.lock();
         ostringstream sHeader = ostringstream();
-        sHeader << "Started processing block from temperature " << temp << ":";
+        sHeader << "Started processing block from temperature " << startTemp << ":";
         writeLine(sHeader.str());
         writeBlock(mat, block, blockSize);
         resultWriteMutex.unlock();
     }
-    int counter = 0;
-    float t = temp;
+
+    int stepCounter = 0;
+    float currentTemp = startTemp;
     do {
-        t -= step;
-        bool cont = true;
-        while (cont) {
-            cont = false;
+        currentTemp -= tempStep;
+        bool continueAnnealing = true;
+        while (continueAnnealing) {
+            continueAnnealing = false;
             for (int spinIndex = 0; spinIndex < size; ++spinIndex) {
                 for (int setIndex = 0; setIndex < blockSize; ++setIndex) {
                     if (iterate(mat, block, setIndex, allLinks[setIndex],
-                                spinIndex, t, expExternal))
-                        cont = true;
+                                spinIndex, currentTemp, expExternal))
+                        continueAnnealing = true;
                 }
             }
-            counter++;
+            stepCounter++;
         }
-    } while (t > 0);
+        if (writeResultsToFile) { // Step complete, write to full log
+            resultWriteMutex.lock();
+            ostringstream stepComplete = ostringstream();
+            stepComplete << "Annealing step complete: Start temperature " << startTemp << ", now " << currentTemp
+                         << endl;
+            writeLine(stepComplete.str());
+            resultWriteMutex.unlock();
+        }
+    } while (currentTemp > 0);
     printMutex.lock();
-    cout << temp;
+    cout << startTemp;
     bool noInteraction = true;
     for (vector<int> link : allLinks)
         noInteraction = noInteraction || link.empty();
@@ -171,14 +180,15 @@ void Annealing::anneal(float *mat, float *block, int blockSize, float temp, floa
             cout << " " << hamiltonian(mat, block + setIndex * size);
         else
             cout << " <" << hamiltonian(mat, block + setIndex * size) << ">";
-    cout << " [" << counter << " iterations]"
+    cout << " [" << stepCounter << " iterations]"
          << endl;
     printMutex.unlock();
-    if (writeResultsToFile) {
+
+    if (writeResultsToFile) { // Block annealing complete, write to full log
         resultWriteMutex.lock();
         ostringstream fHeader = ostringstream();
-        fHeader << "Finished processing block; Start temperature was " << temp << "; Took " << counter
-                << " iterations; block data:";
+        fHeader << "Finished processing block; Start temperature was " << startTemp << "; Took " << stepCounter
+                << " steps; block data:";
         writeLine(fHeader.str());
         writeBlock(mat, block, blockSize);
         resultWriteMutex.unlock();

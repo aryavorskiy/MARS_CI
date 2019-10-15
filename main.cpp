@@ -9,7 +9,7 @@
 #include "Annealing.h"
 
 #define VERSION "2.5";
-#define BUILD 13;
+#define BUILD 14;
 
 /*
  * TERMINOLOGY:
@@ -22,10 +22,9 @@
 using namespace std;
 using namespace Annealing;
 
-
 vector<string> matLoadModeStr{"RAND", "FILE_TABLE", "FILE_LIST"};
 
-string getTimeString(double time) {
+string getTimeString(double time) { // Used to print info about time
     if (time <= 0)
         return "0 h 0 m 0 s";
     ostringstream oss;
@@ -33,9 +32,9 @@ string getTimeString(double time) {
     int h = (int) ((time - d * 24 * 3600) / 3600);
     int m = (int) ((time - d * 24 * 3600 - h * 3600) / 60);
     int s = (int) (time - d * 24 * 3600 - h * 3600 - m * 60);
-    if (d != 0) {
+    if (d != 0)
         oss << d << " d ";
-    }
+
     oss << h << " h " << m << " m " << s << " s";
     return oss.str();
 }
@@ -44,17 +43,19 @@ int main() {
     cout << "MARS analysis by A. Yavorski, CPU edition, version " << VERSION
     cout << ", build " << BUILD
     cout << endl;
-    float tempStart = 10;
-    float tempFinal = 10;
+
+    // Load temperature bounds
+    float tempStart = 10, tempFinal = 10, annealingStep = 0.01;
     cout << "Start temp?" << endl;
     cin >> tempStart;
     cout << "Final temp?" << endl;
     cin >> tempFinal;
-    float annealingStep = 0.01;
     cout << "Annealing step?" << endl;
     cin >> annealingStep;
-    cout << "Lattice type?" << endl;
+
+    // Load lattice
     string loadModeStr;
+    cout << "Lattice type?" << endl;
     cin >> loadModeStr;
     while (find(matLoadModeStr.begin(), matLoadModeStr.end(), loadModeStr) == matLoadModeStr.end()) {
         cout << "Expected one of following: ";
@@ -89,10 +90,11 @@ int main() {
             cout << "Lattice loaded, size: " << size << " (check). ";
             break;
     }
+
+    // Load block configuration
     cout << "Thread quantity?" << endl;
     int threads;
     cin >> threads;
-
     cout << "Block file location (Enter block size to create a random block)?" << endl;
     string blockFilename;
     cin >> blockFilename;
@@ -111,29 +113,32 @@ int main() {
         randomizeBlocks = false;
         cout << "Block loaded, size: " << blockSize << " (check). ";
     }
-
-    cout << "Block quantity?" << endl;
     int blockQty;
+    cout << "Block quantity?" << endl;
     cin >> blockQty;
 
-    cout << "Links file location (NONE for no interaction)?" << endl;
+    // Load link configuration
     string linksFilename;
-    cin >> linksFilename;
     vector<vector<int>> allLinks;
+    cout << "Links file location (NONE for no interaction)?" << endl;
+    cin >> linksFilename;
     if (linksFilename == "NONE")
-        allLinks = vector<vector<int>>(size, vector<int>{});
+        allLinks = vector<vector<int >>(size, vector<int>{});
     else
         allLinks = InputLoader::loadLinks(linksFilename);
 
+    // Interaction quotient
     cout << "Interaction quotient (decimal log)?" << endl;
     cin >> interactionQuotient;
 
+    // Enable/disable full log
     cout << "File to save all results (NONE for no saving)?" << endl;
     string resultsFileName;
     cin >> resultsFileName;
     if (resultsFileName != "NONE")
         Annealing::setUpResultWriting(resultsFileName);
 
+    // Finally, start annealing
     int *glExpExternal = new int[threads];
     bool *runningFlags = new bool[threads];
     for (int thrIndex = 0; thrIndex < threads; ++thrIndex)
@@ -152,7 +157,7 @@ int main() {
 
                 // Launch new run on a separate thread
                 thread(anneal, J, Blocks + size * blockSize * thrIndex, blockSize,
-                       tempStart + (launchedThrCount / (float) blockQty) * (tempFinal - tempStart),
+                       tempStart + ((float) launchedThrCount / (float) blockQty) * (tempFinal - tempStart),
                        annealingStep, runningFlags + thrIndex, glExpExternal + thrIndex, allLinks).detach();
                 launchedThrCount++;
             }
