@@ -8,8 +8,8 @@
 #include "InputLoader.h"
 #include "Annealing.h"
 
-#define VERSION "2.5";
-#define BUILD 14;
+#define VERSION "2.6";
+#define BUILD 1;
 
 /*
  * TERMINOLOGY:

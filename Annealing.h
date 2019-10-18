@@ -13,15 +13,13 @@ namespace Annealing {
 
     float meanField(const float *mat, const float *set, int spinIndex);
 
-    float probXi(const float *setX, const float *setY, int spinIndex);
-
     float prob(float *setX, float *setY, int *expExternal);
 
-    float probDXi(float *setX, float *setY, int spinIndex, int *expExternal);
+    float probDXi(float probGiven, const float *setX, const float *setY, int spinIndex);
 
     bool
-    iterate(float *mat, float *block, int setIndex, const vector<int> &link, int spinIndex, float currentTemp,
-            int *expExternal);
+    iterateSet(float *mat, float *block, int setIndex, const vector<int> &links, float currentTemp,
+               int *expExternal);
 
     void setUpResultWriting(const string &fileName);
 

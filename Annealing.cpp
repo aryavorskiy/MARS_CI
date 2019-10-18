@@ -67,7 +67,7 @@ void Annealing::onResultsWritten(const string &postfix) {
 
 void Annealing::setRandomize(float *setPtr) {
     for (int i = 0; i < size; ++i) {
-        setPtr[i] = rand() / (float) RAND_MAX * 2 - 1;
+        setPtr[i] = (float) rand() / (float) RAND_MAX * 2 - 1;
     }
 }
 
@@ -98,40 +98,46 @@ float Annealing::meanField(const float *mat, const float *set, int spinIndex) { 
     return meanField;
 }
 
-float Annealing::probXi(const float *setX, const float *setY, int spinIndex) { // Returns P_ind
-    return (1 + setX[spinIndex] * setY[spinIndex]) / 2.f;
-}
-
 float Annealing::prob(float *setX, float *setY, int *expExternal) { // Returns P
     float eqProbability = 1;
     *expExternal = 0;
-    for (int i = 0; i < size; ++i) {
-        eqProbability *= probXi(setX, setY, i);
+    for (int spinIndex = 0; spinIndex < size; ++spinIndex) {
+        eqProbability *= (1 + setX[spinIndex] * setY[spinIndex]) / 2.f;
         adjustPrecision(&eqProbability, expExternal);
     }
     return eqProbability == 0 ? 0 : eqProbability * exp10f(((float) *expExternal + interactionQuotient));
 }
 
-float Annealing::probDXi(float *setX, float *setY, int spinIndex, int *expExternal) { // Returns dP / dx_ind
+float Annealing::probDXi(float probGiven, const float *setX, const float *setY, int spinIndex) { // Returns dP / dx_ind
     if (1 + setX[spinIndex] * setY[spinIndex] == 0)
         return 0;
-    return prob(setX, setY, expExternal) * setY[spinIndex] / (1 + setX[spinIndex] * setY[spinIndex]);
+    return probGiven * setY[spinIndex] / (1 + setX[spinIndex] * setY[spinIndex]);
 }
 
-bool
-Annealing::iterate(float *mat, float *block, int setIndex, const vector<int> &link, int spinIndex, float currentTemp,
-                   int *expExternal) {
-    float totalField = 0;
-    totalField += meanField(mat, block + setIndex * size, spinIndex);
-    for (int interaction : link)
-        totalField -= probDXi(block + setIndex * size, block + interaction * size, spinIndex, expExternal);
+bool Annealing::iterateSet(float *mat, float *block, int setIndex, const vector<int> &links,
+                           float currentTemp, int *expExternal) {
+    auto *probStorage = new float[links.size()];
+    for (ulong i = 0; i < links.size(); i++)
+        probStorage[i] = prob(block + setIndex * size, block + links[i] * size, expExternal);
+    bool setNotStable = false;
 
-    float old = block[setIndex * size + spinIndex];
-    block[setIndex * size + spinIndex] = currentTemp > 0 ? tanhf(-totalField / currentTemp) :
-                                         totalField > 0 ? -1 : 1;
-    return (block[setIndex * size + spinIndex] - old > 0)
-           ? (block[setIndex * size + spinIndex] - old > threshold)
-           : (old - block[setIndex * size + spinIndex] > threshold);
+    for (int spinIndex = 0; spinIndex < size; ++spinIndex) {
+        float totalField = meanField(mat, block + setIndex * size, spinIndex);
+        for (ulong i = 0; i < links.size(); i++)
+            totalField -= probDXi(probStorage[i], block + setIndex * size, block + links[i] * size, spinIndex);
+
+        float old = block[setIndex * size + spinIndex];
+        block[setIndex * size + spinIndex] = currentTemp > 0 ? tanhf(-totalField / currentTemp) :
+                                             totalField > 0 ? -1 : 1;
+        setNotStable = setNotStable || ((block[setIndex * size + spinIndex] - old > 0)
+                                        ? (block[setIndex * size + spinIndex] - old > threshold)
+                                        : (old - block[setIndex * size + spinIndex] > threshold));
+
+        for (ulong i = 0; i < links.size(); i++)
+            probStorage[i] *= (1 + block[setIndex * size + spinIndex] * block[links[i] * size + spinIndex]) /
+                              (1 + old * block[links[i] * size + spinIndex]);
+    }
+    return setNotStable;
 }
 
 void Annealing::anneal(float *mat, float *block, int blockSize, float startTemp, float tempStep,
@@ -152,12 +158,10 @@ void Annealing::anneal(float *mat, float *block, int blockSize, float startTemp,
         bool continueAnnealing = true;
         while (continueAnnealing) {
             continueAnnealing = false;
-            for (int spinIndex = 0; spinIndex < size; ++spinIndex) {
-                for (int setIndex = 0; setIndex < blockSize; ++setIndex) {
-                    if (iterate(mat, block, setIndex, allLinks[setIndex],
-                                spinIndex, currentTemp, expExternal))
-                        continueAnnealing = true;
-                }
+            for (int setIndex = 0; setIndex < blockSize; ++setIndex) {
+                if (iterateSet(mat, block, setIndex, allLinks[setIndex],
+                               currentTemp, expExternal))
+                    continueAnnealing = true;
             }
             stepCounter++;
         }
@@ -174,7 +178,7 @@ void Annealing::anneal(float *mat, float *block, int blockSize, float startTemp,
     cout << startTemp;
     bool noInteraction = true;
     for (vector<int> link : allLinks)
-        noInteraction = noInteraction || link.empty();
+        noInteraction = noInteraction && link.empty();
     for (int setIndex = 0; setIndex < blockSize; ++setIndex)
         if (!(allLinks[setIndex].empty() || noInteraction))
             cout << " " << hamiltonian(mat, block + setIndex * size);
