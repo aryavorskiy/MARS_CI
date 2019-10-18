@@ -134,8 +134,9 @@ bool Annealing::iterateSet(float *mat, float *block, int setIndex, const vector<
                                         : (old - block[setIndex * size + spinIndex] > threshold));
 
         for (ulong i = 0; i < links.size(); i++)
-            probStorage[i] *= (1 + block[setIndex * size + spinIndex] * block[links[i] * size + spinIndex]) /
-                              (1 + old * block[links[i] * size + spinIndex]);
+            if (1 + old * block[links[i] * size + spinIndex] != 0)
+                probStorage[i] *= (1 + block[setIndex * size + spinIndex] * block[links[i] * size + spinIndex]) /
+                                  (1 + old * block[links[i] * size + spinIndex]);
     }
     return setNotStable;
 }
