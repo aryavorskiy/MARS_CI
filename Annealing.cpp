@@ -159,11 +159,10 @@ void Annealing::anneal(float *mat, float *block, int blockSize, float startTemp,
         bool continueAnnealing = true;
         while (continueAnnealing) {
             continueAnnealing = false;
-            for (int setIndex = 0; setIndex < blockSize; ++setIndex) {
-                if (iterateSet(mat, block, setIndex, allLinks[setIndex],
-                               currentTemp, expExternal))
-                    continueAnnealing = true;
-            }
+            for (int setIndex = 0; setIndex < blockSize; ++setIndex)
+                if (allLinks[setIndex].empty() || allLinks[setIndex][0] != -1) // Otherwise NO_ANNEAL is true for set
+                    continueAnnealing = continueAnnealing || iterateSet(mat, block, setIndex, allLinks[setIndex],
+                                                                        currentTemp, expExternal);
             stepCounter++;
         }
         if (writeResultsToFile) { // Step complete, write to full log
@@ -176,7 +175,7 @@ void Annealing::anneal(float *mat, float *block, int blockSize, float startTemp,
         }
     } while (currentTemp > 0);
     printMutex.lock();
-    cout << startTemp;
+    cout << startTemp << "\t";
     bool noInteraction = true;
     for (vector<int> link : allLinks)
         noInteraction = noInteraction && link.empty();

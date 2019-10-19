@@ -94,6 +94,10 @@ public:
                         links.push_back(i);
                 outAllLinks.push_back(links);
                 continue;
+            } else if (line == "NO_ANNEAL") {  // Set values will be unchanged during block annealing
+                links.push_back(-1);
+                outAllLinks.push_back(links);
+                continue;
             }
 
             stringstream lineParser = stringstream(line); // Line needs parsing

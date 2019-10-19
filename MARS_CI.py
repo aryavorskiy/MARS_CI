@@ -1,6 +1,8 @@
 #!/usr/bin/python3
+import datetime as dt
 import subprocess
 import sys
+import time
 
 # These lines can be edited
 required_args = ['start', 'end', 'step', 'lat_type', 'lat_arg', 'threads', 'block_data', 'block_qty', 'links', 'int_q',
@@ -52,10 +54,20 @@ else:
                                                                                acquired_args[req_arg]))
         proc.stdin.write(acquired_args[req_arg] + '\n')
         proc.stdin.flush()
-    print("All parameters written, writing program's stdout to file '{}'".format(
+    print("All parameters written, writing program's stdout to file '{}', duplicating here:".format(
         acquired_args.get('file', 'data')))
-    s = proc.stdout.readline()
-    while s != '':
-        file_writer.write(s)
+    start_time = time.time()
+    start_msg = '[Program started at {}]'.format(time.ctime())
+    file_writer.write('{:-^90}\n\n'.format(start_msg))
+    print(start_msg[1:-1])
+    while proc.poll() is None:
+        new_line = proc.stdout.readline()
+        if new_line != '':
+            file_writer.write(new_line)
+            print('>> ' + new_line, end='')
         file_writer.flush()
         s = proc.stdout.readline()
+    finish_msg = '[Program finished working at {}; {} elapsed]'.format(
+        time.ctime(), dt.timedelta(seconds=int(time.time() - start_time)))
+    file_writer.write('\n{:-^90}'.format(finish_msg))
+    print(finish_msg[1:-1])

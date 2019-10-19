@@ -9,7 +9,7 @@
 #include "Annealing.h"
 
 #define VERSION "2.6";
-#define BUILD 3;
+#define BUILD 7;
 
 /*
  * TERMINOLOGY:
@@ -23,21 +23,6 @@ using namespace std;
 using namespace Annealing;
 
 vector<string> matLoadModeStr{"RAND", "FILE_TABLE", "FILE_LIST"};
-
-string getTimeString(double time) { // Used to print info about time
-    if (time <= 0)
-        return "0 h 0 m 0 s";
-    ostringstream oss;
-    int d = (int) (time / (24 * 3600));
-    int h = (int) ((time - d * 24 * 3600) / 3600);
-    int m = (int) ((time - d * 24 * 3600 - h * 3600) / 60);
-    int s = (int) (time - d * 24 * 3600 - h * 3600 - m * 60);
-    if (d != 0)
-        oss << d << " d ";
-
-    oss << h << " h " << m << " m " << s << " s";
-    return oss.str();
-}
 
 int main() {
     cout << "MARS analysis by A. Yavorski, CPU edition, version " << VERSION
@@ -144,7 +129,6 @@ int main() {
     for (int thrIndex = 0; thrIndex < threads; ++thrIndex)
         runningFlags[thrIndex] = true;
     int launchedThrCount = 0;
-    double startTime = time(nullptr);
     while (launchedThrCount < blockQty)
         for (int thrIndex = 0; thrIndex < threads; thrIndex++)
             if (runningFlags[thrIndex] && launchedThrCount < blockQty) {
@@ -169,5 +153,4 @@ int main() {
             runningFlag = (runningFlag || !runningFlags[i]);
     }
     Annealing::onResultsWritten();
-    cout << "Calculations complete in " << getTimeString(time(nullptr) - startTime) << endl;
 }
