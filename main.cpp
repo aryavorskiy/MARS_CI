@@ -9,7 +9,7 @@
 #include "Annealing.h"
 
 #define VERSION "2.6";
-#define BUILD 7;
+#define BUILD 8;
 
 /*
  * TERMINOLOGY:
@@ -27,7 +27,7 @@ vector<string> matLoadModeStr{"RAND", "FILE_TABLE", "FILE_LIST"};
 int main() {
     cout << "MARS analysis by A. Yavorski, CPU edition, version " << VERSION
     cout << ", build " << BUILD
-    cout << endl;
+    cout << endl; // Wtf?! Doesn't work when in one line! FIXME
 
     // Load temperature bounds
     float tempStart = 10, tempFinal = 10, annealingStep = 0.01;
@@ -57,7 +57,7 @@ int main() {
             cout << "Lattice size?" << endl;
             cin >> size;
             J = new float[size * size];
-            srand(10);
+            srand(10);  // Invariant seed for easier testing
             matRandomize(J);
             break;
         case 1:

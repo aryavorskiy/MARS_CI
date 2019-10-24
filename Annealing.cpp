@@ -68,6 +68,7 @@ void Annealing::onResultsWritten(const string &postfix) {
 void Annealing::setRandomize(float *setPtr) {
     for (int i = 0; i < size; ++i) {
         setPtr[i] = (float) rand() / (float) RAND_MAX * 2 - 1;
+        // TODO: Implement a normal random generator (Clang-tidy doesn't like this one)
     }
 }
 
@@ -98,7 +99,7 @@ float Annealing::meanField(const float *mat, const float *set, int spinIndex) { 
     return meanField;
 }
 
-float Annealing::prob(float *setX, float *setY, int *expExternal) { // Returns P
+float Annealing::prob(const float *setX, const float *setY, int *expExternal) { // Returns P
     float eqProbability = 1;
     *expExternal = 0;
     for (int spinIndex = 0; spinIndex < size; ++spinIndex) {
@@ -177,10 +178,17 @@ void Annealing::anneal(float *mat, float *block, int blockSize, float startTemp,
     printMutex.lock();
     cout << startTemp << "\t";
     bool noInteraction = true;
-    for (vector<int> link : allLinks)
+    for (const vector<int> &link : allLinks)
         noInteraction = noInteraction && link.empty();
+    /*
+     * Circle braces - no-anneal run
+     * Triangle braces - independent run
+     * No braces - dependent run
+     */
     for (int setIndex = 0; setIndex < blockSize; ++setIndex)
-        if (!(allLinks[setIndex].empty() || noInteraction))
+        if (!allLinks[setIndex].empty() && allLinks[setIndex][0] == -1)
+            cout << " (" << hamiltonian(mat, block + setIndex * size) << ")";
+        else if (!allLinks[setIndex].empty() || noInteraction)
             cout << " " << hamiltonian(mat, block + setIndex * size);
         else
             cout << " <" << hamiltonian(mat, block + setIndex * size) << ">";

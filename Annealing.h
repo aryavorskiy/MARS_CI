@@ -13,7 +13,7 @@ namespace Annealing {
 
     float meanField(const float *mat, const float *set, int spinIndex);
 
-    float prob(float *setX, float *setY, int *expExternal);
+    float prob(const float *setX, const float *setY, int *expExternal);
 
     float probDXi(float probGiven, const float *setX, const float *setY, int spinIndex);
 
