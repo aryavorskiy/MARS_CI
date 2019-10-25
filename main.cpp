@@ -9,7 +9,7 @@
 #include "Annealing.h"
 
 #define VERSION "2.6";
-#define BUILD 8;
+#define BUILD 9;
 
 /*
  * TERMINOLOGY:
