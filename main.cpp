@@ -7,9 +7,10 @@
 
 #include "InputLoader.h"
 #include "Annealing.h"
+#include "OutputWriter.h"
 
-#define VERSION "2.6";
-#define BUILD 9;
+#define VERSION "2.8";
+#define BUILD 7;
 
 /*
  * TERMINOLOGY:
@@ -22,7 +23,8 @@
 using namespace std;
 using namespace Annealing;
 
-vector<string> matLoadModeStr{"RAND", "FILE_TABLE", "FILE_LIST"};
+vector<string> matLoadModes{"RAND", "FILE_TABLE", "FILE_LIST"};
+vector<string> hamiltonianModes{"LOG", "NO_LOG"};
 
 int main() {
     cout << "MARS analysis by A. Yavorski, CPU edition, version " << VERSION
@@ -39,19 +41,19 @@ int main() {
     cin >> annealingStep;
 
     // Load lattice
-    string loadModeStr;
+    string matLoadMode;
     cout << "Lattice type?" << endl;
-    cin >> loadModeStr;
-    while (find(matLoadModeStr.begin(), matLoadModeStr.end(), loadModeStr) == matLoadModeStr.end()) {
+    cin >> matLoadMode;
+    while (find(matLoadModes.begin(), matLoadModes.end(), matLoadMode) == matLoadModes.end()) {
         cout << "Expected one of following: ";
-        for (const string &loadMode : matLoadModeStr)
+        for (const string &loadMode : matLoadModes)
             cout << loadMode << ", ";
         cout << endl;
-        cin >> loadModeStr;
+        cin >> matLoadMode;
     }
     float *J;
-    string filename;
-    switch ((int) (find(matLoadModeStr.begin(), matLoadModeStr.end(), loadModeStr) - matLoadModeStr.begin())) {
+    string matFilename;
+    switch ((int) (find(matLoadModes.begin(), matLoadModes.end(), matLoadMode) - matLoadModes.begin())) {
         case 0:
             // Random lattice
             cout << "Lattice size?" << endl;
@@ -63,15 +65,15 @@ int main() {
         case 1:
             // Load in table mode
             cout << "File path?" << endl;
-            cin >> filename;
-            J = InputLoader::loadMatFromTable(filename, &size);
+            cin >> matFilename;
+            J = InputLoader::loadMatFromTable(matFilename, &size);
             cout << "Lattice loaded, size: " << size << " (check). ";
             break;
         case 2:
             // Load in list mode
             cout << "File path?" << endl;
-            cin >> filename;
-            J = InputLoader::loadMatFromList(filename, &size);
+            cin >> matFilename;
+            J = InputLoader::loadMatFromList(matFilename, &size);
             cout << "Lattice loaded, size: " << size << " (check). ";
             break;
     }
@@ -114,17 +116,31 @@ int main() {
 
     // Interaction quotient
     cout << "Interaction quotient (decimal log)?" << endl;
-    cin >> interactionQuotient;
+    float fQuotient;
+    cin >> fQuotient;
+    interactionQuotient = BigFloat(exp10f(fQuotient - (int) fQuotient), (int) fQuotient);
+
+    // Hamiltonian mode: log or not log
+    string hamiltonianMode;
+    cout << "Hamiltonian mode?" << endl;
+    cin >> hamiltonianMode;
+    while (find(hamiltonianModes.begin(), hamiltonianModes.end(), hamiltonianMode) == hamiltonianModes.end()) {
+        cout << "Expected one of following: ";
+        for (const string &hamMode : hamiltonianModes)
+            cout << hamMode << ", ";
+        cout << endl;
+        cin >> hamiltonianMode;
+    }
+    bool hamiltonianLog = hamiltonianModes[0] == hamiltonianMode;
 
     // Enable/disable full log
     cout << "File to save all results (NONE for no saving)?" << endl;
     string resultsFileName;
     cin >> resultsFileName;
     if (resultsFileName != "NONE")
-        Annealing::setUpResultWriting(resultsFileName);
+        OutputWriter::setUpResultWriting(resultsFileName);
 
     // Finally, start annealing
-    int *glExpExternal = new int[threads];
     bool *runningFlags = new bool[threads];
     for (int thrIndex = 0; thrIndex < threads; ++thrIndex)
         runningFlags[thrIndex] = true;
@@ -142,7 +158,7 @@ int main() {
                 // Launch new run on a separate thread
                 thread(anneal, J, Blocks + size * blockSize * thrIndex, blockSize,
                        tempStart + ((float) launchedThrCount / (float) blockQty) * (tempFinal - tempStart),
-                       annealingStep, runningFlags + thrIndex, glExpExternal + thrIndex, allLinks).detach();
+                       annealingStep, runningFlags + thrIndex, allLinks, hamiltonianLog).detach();
                 launchedThrCount++;
             }
 
@@ -152,5 +168,5 @@ int main() {
         for (int i = 0; i < threads; i++)
             runningFlag = (runningFlag || !runningFlags[i]);
     }
-    Annealing::onResultsWritten();
+    OutputWriter::onResultsWritten();
 }

@@ -5,25 +5,23 @@
 #ifndef MARS_2_ANNEALING_H
 #define MARS_2_ANNEALING_H
 
+#include "BigFloat.h"
+
 using namespace std;
 
 namespace Annealing {
     extern int size;
-    extern float interactionQuotient;
+    extern BigFloat interactionQuotient;
 
     float meanField(const float *mat, const float *set, int spinIndex);
 
-    float prob(const float *setX, const float *setY, int *expExternal);
+    BigFloat prob(const float *setX, const float *setY);
 
-    float probDXi(float probGiven, const float *setX, const float *setY, int spinIndex);
+    BigFloat probDXi(BigFloat probGiven, const float *setX, const float *setY, int spinIndex);
 
     bool
     iterateSet(float *mat, float *block, int setIndex, const vector<int> &links, float currentTemp,
-               int *expExternal);
-
-    void setUpResultWriting(const string &fileName);
-
-    void onResultsWritten(const string &postfix = "");
+               bool hamiltonianMode);
 
     void setRandomize(float *setPtr);
 
@@ -32,8 +30,7 @@ namespace Annealing {
     float hamiltonian(const float *mat, const float *set);
 
     void anneal(float *mat, float *block, int blockSize, float startTemp, float tempStep, bool *thrInactive,
-                int *expExternal,
-                vector<vector<int>> allLinks);
+                vector<vector<int>> allLinks, bool hamiltonianMode);
 }
 
 #endif //MARS_2_ANNEALING_H
