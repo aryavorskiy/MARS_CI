@@ -9,8 +9,8 @@
 #include "Annealing.h"
 #include "OutputWriter.h"
 
-#define VERSION "2.8";
-#define BUILD 7;
+#define VERSION "2.9";
+#define BUILD 1;
 
 /*
  * TERMINOLOGY:

@@ -56,13 +56,6 @@ BigFloat Annealing::prob(const float *setX, const float *setY) {  // Returns P
     return eqProbability;
 }
 
-BigFloat
-Annealing::probDXi(BigFloat probGiven, const float *setX, const float *setY, int spinIndex) {  // Returns dP / dx_ind
-    if (1 + setX[spinIndex] * setY[spinIndex] == 0)
-        return BigFloat();
-    return probGiven * setY[spinIndex] / (1 + setX[spinIndex] * setY[spinIndex]);
-}
-
 bool Annealing::iterateSet(float *mat, float *block, int setIndex, const vector<int> &links, float currentTemp,
                            bool hamiltonianMode) {
     auto *probStorage = new BigFloat[links.size()];
@@ -71,19 +64,21 @@ bool Annealing::iterateSet(float *mat, float *block, int setIndex, const vector<
     bool setNotStable = false;
 
     for (int spinIndex = 0; spinIndex < size; ++spinIndex) {
+        // Add mean-field
         BigFloat totalField(meanField(mat, block + setIndex * size, spinIndex));
-        for (ulong i = 0; i < links.size(); i++) {  // Evaluate linked sets
+        for (ulong i = 0; i < links.size(); i++) {  // Evaluate linked sets interactions
             if (block[spinIndex + setIndex * size] * block[spinIndex + links[i] * size] == -1)
                 continue;  // Prevent zero division
-            if (hamiltonianMode)  // Logarithm in hamiltonian
-                totalField -= BigFloat(interactionQuotient) * (block[spinIndex + links[i] * size] /
-                                                               (1 + block[spinIndex + setIndex * size] *
-                                                                    block[spinIndex + links[i] * size]));
-            else  // No logarithm in hamiltonian
-                totalField -= probDXi(probStorage[i], block + setIndex * size, block + links[i] * size,
-                                      spinIndex) * interactionQuotient;
+            BigFloat currentField = interactionQuotient * (block[spinIndex + links[i] * size] /
+                                                           (1 + block[spinIndex + setIndex * size] *
+                                                                block[spinIndex + links[i] * size]));
+            if (!hamiltonianMode)  // No logarithm in hamiltonian
+                currentField *= probStorage[i];
+
+            totalField -= currentField;
         }
 
+        // Write new value to spin
         float old = block[setIndex * size + spinIndex];
         block[setIndex * size + spinIndex] = currentTemp > 0 ? tanhf((float) (totalField / -currentTemp)) :
                                              totalField > 0 ? -1 : 1;
@@ -91,11 +86,12 @@ bool Annealing::iterateSet(float *mat, float *block, int setIndex, const vector<
                                         ? (block[setIndex * size + spinIndex] - old > threshold)
                                         : (old - block[setIndex * size + spinIndex] > threshold));
 
-        for (ulong i = 0; i < links.size(); i++)
+        for (ulong i = 0; i < links.size(); i++)  // Recalculate P values
             if (1 + old * block[links[i] * size + spinIndex] != 0)
                 probStorage[i] *= (1 + block[setIndex * size + spinIndex] * block[links[i] * size + spinIndex]) /
                                   (1 + old * block[links[i] * size + spinIndex]);
     }
+    delete[] probStorage;  // Clean up to prevent memory leaks
     return setNotStable;
 }
 

@@ -5,6 +5,7 @@
 #ifndef MARS_CI_BIGFLOAT_H
 #define MARS_CI_BIGFLOAT_H
 
+#include <cmath>
 #include <cstdlib>
 #include <cmath>
 
@@ -18,44 +19,50 @@ private:
             exponent = 0;
             return;
         }
-        while (abs(mantissa) > 10) {
+        while (std::fabs(mantissa) > 10) {
             mantissa /= 10;
             exponent += 1;
         }
-        while (abs(mantissa) < 1) {
+        while (std::fabs(mantissa) < 1) {
             mantissa *= 10;
             exponent -= 1;
         }
     }
 
-    void add(BigFloat _bigFloat) {
+    BigFloat add(BigFloat _bigFloat) {
         setupPrecision();
         _bigFloat.setupPrecision();
         if (_bigFloat.mantissa == 0)
-            return;
+            return *this;
         if (mantissa == 0) {
             mantissa = _bigFloat.mantissa;
             exponent = _bigFloat.exponent;
-            return;
+            return *this;
         }
 
         if (exponent < _bigFloat.exponent) {
             long expDiff = _bigFloat.exponent - exponent;
-            mantissa /= exp10f(expDiff);
+            mantissa /= exp10f((float) expDiff);
             exponent += expDiff;
         }
-        mantissa += _bigFloat.mantissa * exp10f(_bigFloat.exponent - exponent);
+        mantissa += _bigFloat.mantissa * exp10f((float) (_bigFloat.exponent - exponent));
         setupPrecision();
+        return *this;
     }
 
-    void multiplyBy(BigFloat _bigFloat) {
+    BigFloat multiplyBy(BigFloat _bigFloat) {
         mantissa *= _bigFloat.mantissa;
         exponent += _bigFloat.exponent;
         setupPrecision();
+        return *this;
+    }
+
+    BigFloat getInstance() {
+        return BigFloat(mantissa, exponent);
     }
 
 public:
-    explicit BigFloat(float _base = 0, int _exp = 0) {
+    explicit BigFloat(float _base = 0, long _exp = 0) {
         mantissa = _base;
         exponent = _exp;
         setupPrecision();
@@ -76,7 +83,7 @@ public:
     }
 
     explicit operator float() {
-        return mantissa * exp10f(exponent);
+        return mantissa * exp10f((float) exponent);
     }
 
     BigFloat &operator=(float _float) {
@@ -86,20 +93,11 @@ public:
 
     bool operator==(float _float) { return this->equals(BigFloat(_float)); }
 
-    BigFloat operator*(BigFloat _bigFloat) {
-        this->multiplyBy(_bigFloat);
-        return *this;
-    }
+    BigFloat operator*(BigFloat _bigFloat) { return this->getInstance().multiplyBy(_bigFloat); }
 
-    BigFloat operator*(float _float) {
-        this->multiplyBy(BigFloat(_float));
-        return *this;
-    }
+    BigFloat operator*(float _float) { return this->getInstance().multiplyBy(BigFloat(_float)); }
 
-    BigFloat operator/(float _float) {
-        this->multiplyBy(BigFloat(1 / _float));
-        return *this;
-    }
+    BigFloat operator/(float _float) { return this->getInstance().multiplyBy(BigFloat(1 / _float)); }
 
     void operator+=(float _float) { this->add(BigFloat(_float)); }
 

@@ -1,5 +1,4 @@
 #!/usr/bin/python3
-import _io
 import datetime as dt
 import subprocess
 import sys
@@ -90,40 +89,44 @@ def process_load_args(process: subprocess.Popen, params_to_load: dict) -> None:
     print(ConsoleGoodies.LINE)
 
 
-def process_listen(process: subprocess.Popen, file_writer: _io.TextIOWrapper) -> None:
+def process_listen(process: subprocess.Popen, file_writer=None) -> None:
     """Reads the process' stdout and writes it into a file. Returns when the process terminates"""
     start_time = time.time()
     start_msg = '[Program started at {}]'.format(time.ctime())
-    file_writer.write('{:-^90}\n\n'.format(start_msg))
+    if file_writer is not None:
+        file_writer.write('{:-^90}\n\n'.format(start_msg))
     print(start_msg[1:-1])
-    while process.poll() is None:
+    while process.poll() is None:  # Repeat while process is alive
         new_line = process.stdout.readline()
         if new_line != '':
-            file_writer.write(new_line)
+            if file_writer is not None:
+                file_writer.write(new_line)
             print(ConsoleGoodies.PROGRAM_OUTPUT + new_line, end='')
-        file_writer.flush()
+        if file_writer is not None:
+            file_writer.flush()
     finish_msg = '[Program finished working at {}; {} elapsed]'.format(
         time.ctime(), dt.timedelta(seconds=int(time.time() - start_time)))
-    file_writer.write('\n{:-^90}\n\n'.format(finish_msg))
-    file_writer.flush()
+    if file_writer is not None:
+        file_writer.write('\n{:-^90}\n\n'.format(finish_msg))
+        file_writer.flush()
     print(finish_msg[1:-1])
 
 
 def session(session_params: dict) -> None:
     """Launches the program, loads given parameters, captures its output and returns"""
     print('Ensuring that all parameters are defined... ', end='')
-    if not check_args(session_params, verbose=False):
+    if not check_args(session_params, verbose=False):  # Inconsistent config
         print(ConsoleGoodies.FAIL)
         check_args(session_params)
         print('Session aborted\n')
         return
     print('Check')
-    file_writer = open(session_params.get('file', 'data'), session_params.get('write_mode', 'a+'))
+    filename = session_params.get('file', 'data')
+    file_writer = open(filename, session_params.get('write_mode', 'a+'))
     proc = subprocess.Popen([PROGRAM_FILENAME], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                             universal_newlines=True)
     process_load_args(proc, session_params)
-    print('\nAll parameters loaded, writing program\'s stdout to file \'{}\', duplicating here:'.format(
-        session_params.get('file', 'data')))
+    print('\nAll parameters loaded, writing program\'s stdout to file \'{}\', duplicating here:'.format(filename))
     process_listen(proc, file_writer)
     print()
 
@@ -145,6 +148,6 @@ if not sessions:
     session(cli_args)
 else:
     for session_config in sessions:
-        print('\nLoading session #{}... '.format(1 + sessions.index(session_config)), end='')
+        print('\nLaunched session #{}.'.format(1 + sessions.index(session_config)))
         session(session_config)
 print(ConsoleGoodies.MESSAGE + 'All sessions complete, exiting')

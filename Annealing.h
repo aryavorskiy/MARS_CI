@@ -17,8 +17,6 @@ namespace Annealing {
 
     BigFloat prob(const float *setX, const float *setY);
 
-    BigFloat probDXi(BigFloat probGiven, const float *setX, const float *setY, int spinIndex);
-
     bool
     iterateSet(float *mat, float *block, int setIndex, const vector<int> &links, float currentTemp,
                bool hamiltonianMode);
