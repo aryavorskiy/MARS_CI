@@ -9,8 +9,8 @@
 #include "Annealing.h"
 #include "OutputWriter.h"
 
-#define VERSION "2.9";
-#define BUILD 2;
+#define VERSION "1.0 [no-interaction]";
+#define BUILD 1;
 
 /*
  * TERMINOLOGY:
@@ -24,7 +24,6 @@ using namespace std;
 using namespace Annealing;
 
 vector<string> matLoadModes{"RAND", "FILE_TABLE", "FILE_LIST"};
-vector<string> hamiltonianModes{"LOG", "NO_LOG"};
 
 int main() {
     cout << "MARS analysis by A. Yavorski, CPU edition, version " << VERSION
@@ -104,35 +103,6 @@ int main() {
     cout << "Block quantity?" << endl;
     cin >> blockQty;
 
-    // Load link configuration
-    string linksFilename;
-    vector<vector<int>> allLinks;
-    cout << "Links file location (NONE for no interaction)?" << endl;
-    cin >> linksFilename;
-    if (linksFilename == "NONE")
-        allLinks = vector<vector<int >>(size, vector<int>{});
-    else
-        allLinks = InputLoader::loadLinks(linksFilename);
-
-    // Interaction quotient
-    cout << "Interaction quotient (decimal log)?" << endl;
-    float fQuotient;
-    cin >> fQuotient;
-    interactionQuotient = BigFloat(exp10f(fQuotient - (int) fQuotient), (int) fQuotient);
-
-    // Hamiltonian mode: log or not log
-    string hamiltonianMode;
-    cout << "Hamiltonian mode?" << endl;
-    cin >> hamiltonianMode;
-    while (find(hamiltonianModes.begin(), hamiltonianModes.end(), hamiltonianMode) == hamiltonianModes.end()) {
-        cout << "Expected one of following: ";
-        for (const string &hamMode : hamiltonianModes)
-            cout << hamMode << ", ";
-        cout << endl;
-        cin >> hamiltonianMode;
-    }
-    bool hamiltonianLog = hamiltonianModes[0] == hamiltonianMode;
-
     // Enable/disable full log
     cout << "File to save all results (NONE for no saving)?" << endl;
     string resultsFileName;
@@ -158,7 +128,7 @@ int main() {
                 // Launch new run on a separate thread
                 thread(anneal, J, Blocks + size * blockSize * thrIndex, blockSize,
                        tempStart + ((float) launchedThrCount / (float) blockQty) * (tempFinal - tempStart),
-                       annealingStep, runningFlags + thrIndex, allLinks, hamiltonianLog).detach();
+                       annealingStep, runningFlags + thrIndex).detach();
                 launchedThrCount++;
             }
 

@@ -74,47 +74,6 @@ public:
         }
         return blockSize;
     }
-
-    static vector<vector<int>> loadLinks(const string &filename) {
-        vector<vector<int>> outAllLinks = vector<vector<int>>();
-        auto ifs = ifstream(filename);
-        int blockSize;
-        ifs >> blockSize;
-        string line;
-        getline(ifs, line);
-        for (int lineIndex = 0; lineIndex < blockSize; ++lineIndex) {
-            vector<int> links = vector<int>();
-            getline(ifs, line);
-            if (line == "EMPTY" || line == "NONE") { // Set interacts with no others
-                outAllLinks.push_back(links);
-                continue;
-            } else if (line == "ALL") { // Set interacts with every other except himself
-                for (int i = 0; i < blockSize; ++i)
-                    if (i != lineIndex)
-                        links.push_back(i);
-                outAllLinks.push_back(links);
-                continue;
-            } else if (line == "NO_ANNEAL") {  // Set values will be unchanged during block annealing
-                links.push_back(-1);
-                outAllLinks.push_back(links);
-                continue;
-            }
-
-            stringstream lineParser = stringstream(line); // Line needs parsing
-            for (int j = 0; j < blockSize; ++j) {
-                int buf;
-                try {
-                    lineParser >> buf;
-                    if (links.empty() || buf != links.back()) // Duplicates are ignored
-                        links.push_back(buf);
-                } catch (exception &e) { // Invalid line --> ignore
-                    j = blockSize;
-                }
-            }
-            outAllLinks.push_back(links);
-        }
-        return outAllLinks;
-    }
 };
 
 #endif //MARS_2_INPUTLOADER_H

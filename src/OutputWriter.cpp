@@ -62,24 +62,16 @@ void OutputWriter::outputResultsIntermediate(float startTemp, float currentTemp)
 }
 
 void OutputWriter::outputResultsOnFinish(float *mat, float *block, int blockSize, float startTemp, int size,
-                                         vector<vector<int>> allLinks, int stepCounter) {
+                                         int stepCounter) {
     printMutex.lock();
     cout << startTemp << "\t";
-    bool noInteraction = true;
-    for (const vector<int> &link : allLinks)
-        noInteraction = noInteraction && link.empty();
     /*
      * Circle braces - no-anneal run
      * Triangle braces - independent run
      * No braces - dependent run
      */
     for (int setIndex = 0; setIndex < blockSize; ++setIndex)
-        if (!allLinks[setIndex].empty() && allLinks[setIndex][0] == -1)
-            cout << " (" << Annealing::hamiltonian(mat, block + setIndex * size) << ")";
-        else if (allLinks[setIndex].empty())
-            cout << " <" << Annealing::hamiltonian(mat, block + setIndex * size) << ">";
-        else
-            cout << " " << Annealing::hamiltonian(mat, block + setIndex * size);
+        cout << " " << Annealing::hamiltonian(mat, block + setIndex * size);
     cout << " [" << stepCounter << " iterations]"
          << endl;
     printMutex.unlock();

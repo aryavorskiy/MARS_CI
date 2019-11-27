@@ -13,8 +13,8 @@ import time
 #############################################################################
 
 # These lines can be edited
-REQUIRED_PARAMS = ['start', 'end', 'step', 'lat_type', 'lat_arg', 'threads', 'block_data', 'block_qty', 'links',
-                   'int_q', 'hamiltonian_mode', 'results']  # Aliases of the program's run parameters
+REQUIRED_PARAMS = ['start', 'end', 'step', 'lat_type', 'lat_arg', 'threads', 'block_data', 'block_qty',
+                   'results']  # Aliases of the program's run parameters
 PROGRAM_FILENAME = './cmake-build-release/MARS_CI'  # Path to launch the program
 QUESTION_SUFFIX = '?'  # If a line of the program's stdout ends with this, a new parameter is written to its stdin
 

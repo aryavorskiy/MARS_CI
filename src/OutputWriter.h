@@ -33,10 +33,7 @@ namespace OutputWriter {
 
     void outputResultsIntermediate(float startTemp, float currentTemp);
 
-    void
-    outputResultsOnFinish(float *mat, float *block, int blockSize, float startTemp, int size,
-                          vector<vector<int>> allLinks,
-                          int stepCounter);
+    void outputResultsOnFinish(float *mat, float *block, int blockSize, float startTemp, int size, int stepCounter);
 };
 
 
