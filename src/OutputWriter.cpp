@@ -76,10 +76,10 @@ void OutputWriter::outputResultsOnFinish(float *mat, float *block, int blockSize
     for (int setIndex = 0; setIndex < blockSize; ++setIndex)
         if (!allLinks[setIndex].empty() && allLinks[setIndex][0] == -1)
             cout << " (" << Annealing::hamiltonian(mat, block + setIndex * size) << ")";
-        else if (!allLinks[setIndex].empty() || noInteraction)
-            cout << " " << Annealing::hamiltonian(mat, block + setIndex * size);
-        else
+        else if (allLinks[setIndex].empty())
             cout << " <" << Annealing::hamiltonian(mat, block + setIndex * size) << ">";
+        else
+            cout << " " << Annealing::hamiltonian(mat, block + setIndex * size);
     cout << " [" << stepCounter << " iterations]"
          << endl;
     printMutex.unlock();

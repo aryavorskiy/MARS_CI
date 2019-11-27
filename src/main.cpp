@@ -10,7 +10,7 @@
 #include "OutputWriter.h"
 
 #define VERSION "2.9";
-#define BUILD 1;
+#define BUILD 2;
 
 /*
  * TERMINOLOGY:
@@ -140,14 +140,14 @@ int main() {
     if (resultsFileName != "NONE")
         OutputWriter::setUpResultWriting(resultsFileName);
 
-    // Finally, start annealing
+    // Start annealing
     bool *runningFlags = new bool[threads];
     for (int thrIndex = 0; thrIndex < threads; ++thrIndex)
         runningFlags[thrIndex] = true;
     int launchedThrCount = 0;
     while (launchedThrCount < blockQty)
         for (int thrIndex = 0; thrIndex < threads; thrIndex++)
-            if (runningFlags[thrIndex] && launchedThrCount < blockQty) {
+            if (runningFlags[thrIndex] && launchedThrCount < blockQty) {  // Free place for thread detected
                 runningFlags[thrIndex] = false;
                 if (randomizeBlocks)
                     for (int j = 0; j < blockSize; ++j)

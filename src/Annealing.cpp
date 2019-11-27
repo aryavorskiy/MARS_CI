@@ -40,7 +40,6 @@ float Annealing::hamiltonian(const float *mat, const float *set) {  // Returns h
     return hamiltonian;
 }
 
-
 float Annealing::meanField(const float *mat, const float *set, int spinIndex) {  // Returns /Phi_ind
     float meanField = 0;
     for (int i = 0; i < size; ++i)
@@ -56,6 +55,19 @@ BigFloat Annealing::prob(const float *setX, const float *setY) {  // Returns P
     return eqProbability;
 }
 
+BigFloat
+Annealing::interactionField(const float *block, int spinIndex, int setIndex, int linkIndex, bool hamiltonianMode,
+                            BigFloat prob) {
+    if (block[spinIndex + setIndex * size] * block[spinIndex + linkIndex * size] == -1)
+        return BigFloat(0);
+    BigFloat currentField = interactionQuotient * (block[spinIndex + linkIndex * size] /
+                                                   (1 + block[spinIndex + setIndex * size] *
+                                                        block[spinIndex + linkIndex * size]));
+    if (!hamiltonianMode)  // Execute if logarithm in hamiltonian
+        currentField *= prob;
+    return currentField;
+}
+
 bool Annealing::iterateSet(float *mat, float *block, int setIndex, const vector<int> &links, float currentTemp,
                            bool hamiltonianMode) {
     auto *probStorage = new BigFloat[links.size()];
@@ -64,19 +76,11 @@ bool Annealing::iterateSet(float *mat, float *block, int setIndex, const vector<
     bool setNotStable = false;
 
     for (int spinIndex = 0; spinIndex < size; ++spinIndex) {
-        // Add mean-field
-        BigFloat totalField(meanField(mat, block + setIndex * size, spinIndex));
-        for (ulong i = 0; i < links.size(); i++) {  // Evaluate linked sets interactions
-            if (block[spinIndex + setIndex * size] * block[spinIndex + links[i] * size] == -1)
-                continue;  // Prevent zero division
-            BigFloat currentField = interactionQuotient * (block[spinIndex + links[i] * size] /
-                                                           (1 + block[spinIndex + setIndex * size] *
-                                                                block[spinIndex + links[i] * size]));
-            if (!hamiltonianMode)  // No logarithm in hamiltonian
-                currentField *= probStorage[i];
-
-            totalField -= currentField;
-        }
+        // Calculate field
+        BigFloat totalField(0);
+        totalField += meanField(mat, block + setIndex * size, spinIndex);
+        for (ulong i = 0; i < links.size(); i++)  // Evaluate linked sets interactions
+            totalField -= interactionField(block, spinIndex, setIndex, links[i], hamiltonianMode, probStorage[i]);
 
         // Write new value to spin
         float old = block[setIndex * size + spinIndex];

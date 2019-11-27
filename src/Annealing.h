@@ -29,6 +29,10 @@ namespace Annealing {
 
     void anneal(float *mat, float *block, int blockSize, float startTemp, float tempStep, bool *thrInactive,
                 vector<vector<int>> allLinks, bool hamiltonianMode);
+
+    BigFloat
+    interactionField(const float *block, int spinIndex, int setIndex, int linkIndex, bool hamiltonianMode,
+                     BigFloat prob);
 }
 
 #endif //MARS_2_ANNEALING_H
