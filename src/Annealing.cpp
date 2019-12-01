@@ -61,9 +61,12 @@ Annealing::interactionField(const float *block, int spinIndex, int setIndex, int
                             BigFloat prob) {
     if (block[spinIndex + setIndex * size] * block[spinIndex + linkIndex * size] == -1)
         return BigFloat(0);
-    if (hamiltonianLogMode)
-        return interactionQuotient / 2 *
-               log((1 + block[spinIndex + linkIndex * size]) / (1 - block[spinIndex + linkIndex * size]));
+    if (hamiltonianLogMode) {
+        BigFloat under_log_fraction = BigFloat(1);
+        under_log_fraction += block[spinIndex + linkIndex * size];
+        under_log_fraction = under_log_fraction / (1 - block[spinIndex + linkIndex * size]);
+        return interactionQuotient / 2 * under_log_fraction.ln();
+    }
     else
         return interactionQuotient * (block[spinIndex + linkIndex * size] /
                                       (1 + block[spinIndex + setIndex * size] *

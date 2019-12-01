@@ -82,6 +82,10 @@ public:
                _bigFloat.exponent > exponent ? false : mantissa > _bigFloat.mantissa;
     }
 
+    float ln() {
+        return logf(10) * float(this->exponent) + logf(this->mantissa);
+    }
+
     explicit operator float() {
         return mantissa * exp10f((float) exponent);
     }
