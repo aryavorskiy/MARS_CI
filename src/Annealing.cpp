@@ -3,6 +3,7 @@
 //
 
 #include <vector>
+#include <cmath>
 #include "Annealing.h"
 #include "BigFloat.h"
 #include "OutputWriter.h"
@@ -56,20 +57,21 @@ BigFloat Annealing::prob(const float *setX, const float *setY) {  // Returns P
 }
 
 BigFloat
-Annealing::interactionField(const float *block, int spinIndex, int setIndex, int linkIndex, bool hamiltonianMode,
+Annealing::interactionField(const float *block, int spinIndex, int setIndex, int linkIndex, bool hamiltonianLogMode,
                             BigFloat prob) {
     if (block[spinIndex + setIndex * size] * block[spinIndex + linkIndex * size] == -1)
         return BigFloat(0);
-    BigFloat currentField = interactionQuotient * (block[spinIndex + linkIndex * size] /
-                                                   (1 + block[spinIndex + setIndex * size] *
-                                                        block[spinIndex + linkIndex * size]));
-    if (!hamiltonianMode)  // Execute if logarithm in hamiltonian
-        currentField *= prob;
-    return currentField;
+    if (hamiltonianLogMode)
+        return interactionQuotient / 2 *
+               log((1 + block[spinIndex + linkIndex * size]) / (1 - block[spinIndex + linkIndex * size]));
+    else
+        return interactionQuotient * (block[spinIndex + linkIndex * size] /
+                                      (1 + block[spinIndex + setIndex * size] *
+                                           block[spinIndex + linkIndex * size])) * prob;
 }
 
 bool Annealing::iterateSet(float *mat, float *block, int setIndex, const vector<int> &links, float currentTemp,
-                           bool hamiltonianMode) {
+                           bool hamiltonianLogMode) {
     auto *probStorage = new BigFloat[links.size()];
     for (ulong i = 0; i < links.size(); i++)
         probStorage[i] = prob(block + setIndex * size, block + links[i] * size);
@@ -80,7 +82,7 @@ bool Annealing::iterateSet(float *mat, float *block, int setIndex, const vector<
         BigFloat totalField(0);
         totalField += meanField(mat, block + setIndex * size, spinIndex);
         for (ulong i = 0; i < links.size(); i++)  // Evaluate linked sets interactions
-            totalField -= interactionField(block, spinIndex, setIndex, links[i], hamiltonianMode, probStorage[i]);
+            totalField += interactionField(block, spinIndex, setIndex, links[i], hamiltonianLogMode, probStorage[i]);
 
         // Write new value to spin
         float old = block[setIndex * size + spinIndex];

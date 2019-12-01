@@ -10,7 +10,7 @@
 #include "OutputWriter.h"
 
 #define VERSION "2.9";
-#define BUILD 2;
+#define BUILD 3;
 
 /*
  * TERMINOLOGY:

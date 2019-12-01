@@ -17,9 +17,8 @@ namespace Annealing {
 
     BigFloat prob(const float *setX, const float *setY);
 
-    bool
-    iterateSet(float *mat, float *block, int setIndex, const vector<int> &links, float currentTemp,
-               bool hamiltonianMode);
+    bool iterateSet(float *mat, float *block, int setIndex, const vector<int> &links, float currentTemp,
+                    bool hamiltonianLogMode);
 
     void setRandomize(float *setPtr);
 
@@ -31,7 +30,7 @@ namespace Annealing {
                 vector<vector<int>> allLinks, bool hamiltonianMode);
 
     BigFloat
-    interactionField(const float *block, int spinIndex, int setIndex, int linkIndex, bool hamiltonianMode,
+    interactionField(const float *block, int spinIndex, int setIndex, int linkIndex, bool hamiltonianLogMode,
                      BigFloat prob);
 }
 
