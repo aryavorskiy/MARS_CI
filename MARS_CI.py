@@ -125,6 +125,7 @@ def session(session_params: dict) -> None:
     file_writer = open(filename, session_params.get('write_mode', 'a+'))
     proc = subprocess.Popen([PROGRAM_FILENAME], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                             universal_newlines=True)
+    print(ConsoleGoodies.MESSAGE + 'Launched program at location {}'.format(PROGRAM_FILENAME))
     process_load_args(proc, session_params)
     print('\nAll parameters loaded, writing program\'s stdout to file \'{}\', duplicating here:'.format(filename))
     process_listen(proc, file_writer)

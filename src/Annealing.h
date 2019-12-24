@@ -29,7 +29,7 @@ namespace Annealing {
     void anneal(float *mat, float *block, int blockSize, float startTemp, float tempStep, bool *thrInactive,
                 vector<vector<int>> allLinks, bool hamiltonianMode);
 
-    BigFloat
+    float
     interactionField(const float *block, int spinIndex, int setIndex, int linkIndex, bool hamiltonianLogMode,
                      BigFloat prob);
 }

@@ -11,6 +11,7 @@
 using namespace std;
 
 const float threshold = 0.001;
+const float interactionThreshold = 0.9;
 
 int Annealing::size = 100;
 BigFloat Annealing::interactionQuotient = BigFloat();
@@ -56,21 +57,23 @@ BigFloat Annealing::prob(const float *setX, const float *setY) {  // Returns P
     return eqProbability;
 }
 
-BigFloat
+float
 Annealing::interactionField(const float *block, int spinIndex, int setIndex, int linkIndex, bool hamiltonianLogMode,
                             BigFloat prob) {
     if (block[spinIndex + setIndex * size] * block[spinIndex + linkIndex * size] == -1)
-        return BigFloat(0);
+        return 0;
+    if (abs(block[spinIndex + setIndex * size]) > interactionThreshold)
+        return 0.;
     if (hamiltonianLogMode) {
-        BigFloat under_log_fraction = BigFloat(1);
-        under_log_fraction += block[spinIndex + linkIndex * size];
+        if (abs(block[spinIndex + linkIndex * size]) >= 1)
+            return (MAXFLOAT * block[spinIndex + linkIndex * size]);
+        float under_log_fraction = 1 + block[spinIndex + linkIndex * size];
         under_log_fraction = under_log_fraction / (1 - block[spinIndex + linkIndex * size]);
-        return interactionQuotient / 2 * under_log_fraction.ln();
-    }
-    else
-        return interactionQuotient * (block[spinIndex + linkIndex * size] /
-                                      (1 + block[spinIndex + setIndex * size] *
-                                           block[spinIndex + linkIndex * size])) * prob;
+        return (float) (interactionQuotient / 2 * logf(under_log_fraction));
+    } else
+        return (float) (interactionQuotient * (block[spinIndex + linkIndex * size] /
+                                               (1 + block[spinIndex + setIndex * size] *
+                                                    block[spinIndex + linkIndex * size])) * prob);
 }
 
 bool Annealing::iterateSet(float *mat, float *block, int setIndex, const vector<int> &links, float currentTemp,
@@ -83,9 +86,13 @@ bool Annealing::iterateSet(float *mat, float *block, int setIndex, const vector<
     for (int spinIndex = 0; spinIndex < size; ++spinIndex) {
         // Calculate field
         BigFloat totalField(0);
+        if (currentTemp > 0)
+            for (ulong i = 0; i < links.size(); i++) { // Evaluate linked sets interactions
+                float tField = interactionField(block, spinIndex, setIndex, links[i], hamiltonianLogMode,
+                                                probStorage[i]);
+                totalField += tField;
+            }
         totalField += meanField(mat, block + setIndex * size, spinIndex);
-        for (ulong i = 0; i < links.size(); i++)  // Evaluate linked sets interactions
-            totalField += interactionField(block, spinIndex, setIndex, links[i], hamiltonianLogMode, probStorage[i]);
 
         // Write new value to spin
         float old = block[setIndex * size + spinIndex];
@@ -94,6 +101,8 @@ bool Annealing::iterateSet(float *mat, float *block, int setIndex, const vector<
         setNotStable = setNotStable || ((block[setIndex * size + spinIndex] - old > 0)
                                         ? (block[setIndex * size + spinIndex] - old > threshold)
                                         : (old - block[setIndex * size + spinIndex] > threshold));
+        if (abs(old - block[setIndex * size + spinIndex]) >= threshold)
+            int a = 0;  // DEBUG
 
         for (ulong i = 0; i < links.size(); i++)  // Recalculate P values
             if (1 + old * block[links[i] * size + spinIndex] != 0)
@@ -117,8 +126,8 @@ void Annealing::anneal(float *mat, float *block, int blockSize, float startTemp,
             continueAnnealing = false;
             for (int setIndex = 0; setIndex < blockSize; ++setIndex)
                 if (allLinks[setIndex].empty() || allLinks[setIndex][0] != -1)  // Otherwise NO_ANNEAL is true for set
-                    continueAnnealing = continueAnnealing || iterateSet(mat, block, setIndex, allLinks[setIndex],
-                                                                        currentTemp, hamiltonianMode);
+                    continueAnnealing = iterateSet(mat, block, setIndex, allLinks[setIndex],
+                                                   currentTemp, hamiltonianMode) || continueAnnealing;
             stepCounter++;
         }
         OutputWriter::outputResultsIntermediate(startTemp, currentTemp);

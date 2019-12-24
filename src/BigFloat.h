@@ -87,6 +87,9 @@ public:
     }
 
     explicit operator float() {
+        this->setupPrecision();
+        if (exponent >= 38)  // Prevent overflow
+            return MAXFLOAT * (mantissa > 0 ? 1. : -1.);
         return mantissa * exp10f((float) exponent);
     }
 

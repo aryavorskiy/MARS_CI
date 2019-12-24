@@ -8,9 +8,10 @@
 #include "InputLoader.h"
 #include "Annealing.h"
 #include "OutputWriter.h"
+#include "BigFloat.h"
 
 #define VERSION "2.9";
-#define BUILD 4;
+#define BUILD 6;
 
 /*
  * TERMINOLOGY:
