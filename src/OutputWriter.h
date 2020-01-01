@@ -23,9 +23,9 @@ namespace OutputWriter {
 
     void setUpResultWriting(const string &fileName);
 
-    void writeLine(const string &line);
-
     void writeBlock(float *mat, float *block, int blockSize);
+
+    void writeMat(float *mat);
 
     void onResultsWritten(const string &postfix = "");
 

@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 import datetime as dt
+import shutil
 import subprocess
 import sys
 import time
@@ -21,10 +22,12 @@ QUESTION_SUFFIX = '?'  # If a line of the program's stdout ends with this, a new
 
 class ConsoleGoodies:
     """These constants make the output beautiful"""
-    PROGRAM_OUTPUT = '\033[1m\033[95m>>\033[0m '
-    MESSAGE = '\033[94mMessage:\033[0m '
-    LINE = '\033[93m' + '-' * 120 + '\033[0m '
-    ERROR = '\033[91mError:\033[0m '
+    TERM_WIDTH = 80 if not shutil.get_terminal_size((80, 25)).columns else shutil.get_terminal_size((80, 25)).columns
+    PROGRAM_OUTPUT = '\033[1m\033[95m>>\033[0m'
+    PROGRAM_INPUT = '\033[1m\033[96m<<\033[0m'
+    MESSAGE = '\033[94mMessage:\033[0m'
+    LINE = '\033[93m' + '-' * TERM_WIDTH + '\033[0m'
+    ERROR = '\033[91mError:\033[0m'
     FAIL = '\033[91mFailed\033[0m'
 
 
@@ -76,14 +79,15 @@ def check_args(args: dict, verbose: bool = True) -> bool:
 def process_load_args(process: subprocess.Popen, params_to_load: dict) -> None:
     """Writes the config's parameters to the process' stdin. Returns when all arguments are loaded"""
     print('Started loading parameters to program. Awaiting line ending with suffix \'{}\'...'.format(QUESTION_SUFFIX))
+    print()
+    print(ConsoleGoodies.LINE)
     for req_arg in REQUIRED_PARAMS:
         new_line = process.stdout.readline()
-        print(ConsoleGoodies.PROGRAM_OUTPUT + new_line, end='')
+        print(ConsoleGoodies.PROGRAM_OUTPUT, new_line, end='')
         while not new_line[:-1].endswith(QUESTION_SUFFIX):
             new_line = process.stdout.readline()
-            print(ConsoleGoodies.PROGRAM_OUTPUT + new_line, end='')
-        print('Line ends with suffix \'{}\', appending parameter {}={}'.format(QUESTION_SUFFIX, req_arg,
-                                                                               params_to_load[req_arg]))
+            print(ConsoleGoodies.PROGRAM_OUTPUT, new_line, end='')
+        print(ConsoleGoodies.PROGRAM_INPUT, params_to_load[req_arg], '[{}]'.format(req_arg))
         process.stdin.write(params_to_load[req_arg] + '\n')
         process.stdin.flush()
     print(ConsoleGoodies.LINE)
@@ -96,12 +100,14 @@ def process_listen(process: subprocess.Popen, file_writer=None) -> None:
     if file_writer is not None:
         file_writer.write('{:-^90}\n\n'.format(start_msg))
     print(start_msg[1:-1])
+    print()
+    print(ConsoleGoodies.LINE)
     while process.poll() is None:  # Repeat while process is alive
         new_line = process.stdout.readline()
         if new_line != '':
             if file_writer is not None:
                 file_writer.write(new_line)
-            print(ConsoleGoodies.PROGRAM_OUTPUT + new_line, end='')
+            print(ConsoleGoodies.PROGRAM_OUTPUT, new_line, end='')
         if file_writer is not None:
             file_writer.flush()
     finish_msg = '[Program finished working at {}; {} elapsed]'.format(
@@ -109,6 +115,8 @@ def process_listen(process: subprocess.Popen, file_writer=None) -> None:
     if file_writer is not None:
         file_writer.write('\n{:-^90}\n\n'.format(finish_msg))
         file_writer.flush()
+    print(ConsoleGoodies.LINE)
+    print()
     print(finish_msg[1:-1])
 
 
@@ -137,17 +145,17 @@ for cli_arg in sys.argv:
     extract_args_from_line(cli_arg, cli_args)
 
 if 'config' in cli_args.keys():
-    print(ConsoleGoodies.MESSAGE + '\'config\' argument detected, trying to read file \'{}\'...'.format(
+    print(ConsoleGoodies.MESSAGE, '\'config\' argument detected, trying to read file \'{}\'...'.format(
         cli_args['config']))
     sessions = load_config(cli_args['config'], cli_args)
     if not sessions:
-        print(ConsoleGoodies.ERROR + 'No config file found where specified, fallback')
+        print(ConsoleGoodies.ERROR, 'No config file found where specified, fallback')
 
 if not sessions:
-    print(ConsoleGoodies.MESSAGE + 'only CLI arguments will be loaded as parameters')
+    print(ConsoleGoodies.MESSAGE, 'only CLI arguments will be loaded as parameters')
     session(cli_args)
 else:
     for session_config in sessions:
         print('\nLaunched session #{}.'.format(1 + sessions.index(session_config)))
         session(session_config)
-print(ConsoleGoodies.MESSAGE + 'All sessions complete, exiting')
+print(ConsoleGoodies.MESSAGE, 'All sessions complete, exiting')

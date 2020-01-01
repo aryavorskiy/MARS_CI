@@ -14,10 +14,6 @@ void OutputWriter::setUpResultWriting(const string &fileName) {
     resultWriter = ofstream(fileName);
 }
 
-void OutputWriter::writeLine(const string &line) {
-    resultWriter << line << "\n";
-}
-
 void OutputWriter::writeBlock(float *mat, float *block, int blockSize) {
     for (int setIndex = 0; setIndex < blockSize; ++setIndex) {
         resultWriter << "Set #" << setIndex << "; Hamiltonian: "
@@ -31,6 +27,18 @@ void OutputWriter::writeBlock(float *mat, float *block, int blockSize) {
     resultWriter << endl;
 }
 
+void OutputWriter::writeMat(float *mat) {
+    if (writeResultsToFile) {
+        resultWriter << "Size: " << Annealing::size << ". Cell content:" << endl;
+        for (int i = 0; i < Annealing::size; i++) {
+            resultWriter << i << ">\t";
+            for (int j = 0; j < Annealing::size; j++)
+                resultWriter << mat[i * Annealing::size + j] << " ";
+            resultWriter << endl;
+        }
+    }
+}
+
 void OutputWriter::onResultsWritten(const string &postfix) {
     if (writeResultsToFile) {
         resultWriter << postfix;
@@ -41,9 +49,7 @@ void OutputWriter::onResultsWritten(const string &postfix) {
 void OutputWriter::outputResultsOnStart(float *mat, float *block, int blockSize, float startTemp) {
     if (writeResultsToFile) {  // Block annealing started, write to full log
         resultWriteMutex.lock();
-        ostringstream sHeader = ostringstream();
-        sHeader << "Started processing block from temperature " << startTemp << ":";
-        writeLine(sHeader.str());
+        resultWriter << "Started processing block from temperature " << startTemp << ":" << endl;
         writeBlock(mat, block, blockSize);
         resultWriteMutex.unlock();
     }
@@ -53,10 +59,8 @@ void OutputWriter::outputResultsOnStart(float *mat, float *block, int blockSize,
 void OutputWriter::outputResultsIntermediate(float startTemp, float currentTemp) {
     if (writeResultsToFile) {  // Step complete, write to full log
         resultWriteMutex.lock();
-        ostringstream stepComplete = ostringstream();
-        stepComplete << "Annealing step complete: Start temperature " << startTemp << ", now " << currentTemp
-                     << endl;
-        writeLine(stepComplete.str());
+        resultWriter << "Annealing step complete: Start temperature " << startTemp << ", now " << currentTemp
+                     << endl << endl;
         resultWriteMutex.unlock();
     }
 }
@@ -78,10 +82,8 @@ void OutputWriter::outputResultsOnFinish(float *mat, float *block, int blockSize
 
     if (writeResultsToFile) {  // Block annealing complete, write to full log
         resultWriteMutex.lock();
-        ostringstream fHeader = ostringstream();
-        fHeader << "Finished processing block; Start temperature was " << startTemp << "; Took " << stepCounter
-                << " steps; block data:";
-        writeLine(fHeader.str());
+        resultWriter << "Finished processing block; Start temperature was " << startTemp << "; Took " << stepCounter
+                     << " steps; block data:" << endl;
         writeBlock(mat, block, blockSize);
         resultWriteMutex.unlock();
     }

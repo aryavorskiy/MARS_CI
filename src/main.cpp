@@ -9,7 +9,7 @@
 #include "Annealing.h"
 #include "OutputWriter.h"
 
-#define VERSION "1.0 [no-interaction]";
+#define VERSION "1.1 [no-interaction]";
 #define BUILD 1;
 
 /*
@@ -60,6 +60,7 @@ int main() {
             J = new float[size * size];
             srand(10);  // Invariant seed for easier testing
             matRandomize(J);
+            cout << "Lattice generated. ";
             break;
         case 1:
             // Load in table mode
@@ -91,6 +92,7 @@ int main() {
         blockSize = stoi(blockFilename);
         Blocks = new float[size * blockSize * threads];
         randomizeBlocks = true;
+        cout << "Block generated. " << endl;
     } catch (exception &e) {
         auto ifs = ifstream(blockFilename);
         ifs >> blockSize;
@@ -109,6 +111,8 @@ int main() {
     cin >> resultsFileName;
     if (resultsFileName != "NONE")
         OutputWriter::setUpResultWriting(resultsFileName);
+
+    OutputWriter::writeMat(J);
 
     // Start annealing
     bool *runningFlags = new bool[threads];

@@ -35,13 +35,18 @@ float Annealing::hamiltonian(const float *mat, const float *set) {  // Returns h
     for (int i = 0; i < size; i++)
         for (int j = i + 1; j < size; j++)
             hamiltonian += set[i] * set[j] * mat[i * size + j];
+    for (int i = 0; i < size; i++)
+        hamiltonian += set[i] * mat[i * size + i];//*/
     return hamiltonian;
 }
 
 float Annealing::meanField(const float *mat, const float *set, int spinIndex) {  // Returns /Phi_ind
     float meanField = 0;
     for (int i = 0; i < size; ++i)
-        meanField += mat[spinIndex * size + i] * set[i];
+        if (i != spinIndex)
+            meanField += mat[spinIndex * size + i] * set[i];
+        else
+            meanField += mat[spinIndex * size + i];
     return meanField;
 }
 
