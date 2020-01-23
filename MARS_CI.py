@@ -41,8 +41,8 @@ def extract_args_from_line(text: str, params: dict) -> None:
 
 def load_config(filename: str, override_args: dict) -> list:
     """Loads session configs from given file to a list which is returned. Parameters are represented as a dictionary"""
-    sessions_params = []
-    session_parameters = {}
+    all_sessions_params = []
+    single_session_params = {}
     try:
         config_reader = open(filename)
         for line in config_reader:
@@ -53,16 +53,16 @@ def load_config(filename: str, override_args: dict) -> list:
                     session_repeat = int(line.split()[2])
                 except (ValueError, IndexError):
                     pass  # Repeat number not specified
-                session_parameters.update(override_args)
-                sessions_params.extend([session_parameters] * session_repeat)
-                session_parameters = {}
+                single_session_params.update(override_args)
+                all_sessions_params.extend([single_session_params] * session_repeat)
+                single_session_params = {}
             else:
-                extract_args_from_line(line, session_parameters)
-        session_parameters.update(override_args)
-        sessions_params.extend([session_parameters])
+                extract_args_from_line(line, single_session_params)
+        single_session_params.update(override_args)
+        all_sessions_params.extend([single_session_params])
     except FileNotFoundError:
         pass  # No session config file at given location
-    return sessions_params
+    return all_sessions_params
 
 
 def check_args(args: dict, verbose: bool = True) -> bool:
