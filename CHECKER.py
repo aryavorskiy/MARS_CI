@@ -32,7 +32,7 @@ class Mat:
                 break
         for i in range(self.size):
             for j in range(i):
-                self.mat[i * self.size + j] = self.mat[j * self.size + i]
+                self[i, j] = self[j, i]
 
     def hamiltonian(self, spins: list):
         """Calculates hamiltonian of given spin configuration"""
@@ -49,6 +49,10 @@ class Mat:
         """A nice way to get a lattice element by index"""
         return self.mat[item[0] * self.size + item[1]]
 
+    def __setitem__(self, idx, value):
+        """A nice way to set a lattice value"""
+        self.mat[idx[0] * self.size + idx[1]] = value
+
 
 # Load lattice
 mat_filename = input('Enter mat filename >> ')
@@ -59,14 +63,14 @@ while True:
     spin_set = [1 if float(word) > 0 else -1 for word in input('Enter spin data >> ').split()]
     local_minimum = True
     base_hamiltonian = mat.hamiltonian(spin_set)
-    for i in range(mat.size):
-        spin_set[i] *= -1
+    for spin_idx in range(mat.size):
+        spin_set[spin_idx] *= -1
         new_hamiltonian = mat.hamiltonian(spin_set)
-        spin_set[i] *= -1
+        spin_set[spin_idx] *= -1
         if base_hamiltonian > new_hamiltonian:
             local_minimum = False
             print('Hamiltonian decrease from {} to {} detected when toggling spin #{} value'.
-                  format(base_hamiltonian, new_hamiltonian, i))
+                  format(base_hamiltonian, new_hamiltonian, spin_idx))
     print({
               True: 'Spin configuration is a local minimum; Hamiltonian: {}'.format(base_hamiltonian),
               False: 'Spin configuration is not a local minimum'
