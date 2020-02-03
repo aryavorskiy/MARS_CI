@@ -12,6 +12,7 @@ using namespace std;
 namespace Annealing {
     extern int size;
     extern BigFloat interactionQuotient;
+    extern float temperatureInteractionThreshold;
 
     float meanField(const float *mat, const float *set, int spinIndex);
 

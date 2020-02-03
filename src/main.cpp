@@ -10,8 +10,8 @@
 #include "OutputWriter.h"
 #include "BigFloat.h"
 
-#define VERSION "2.9";
-#define BUILD 6;
+#define VERSION "3.0";
+#define BUILD 1;
 
 /*
  * TERMINOLOGY:
@@ -133,6 +133,9 @@ int main() {
         cin >> hamiltonianMode;
     }
     bool hamiltonianLog = hamiltonianModes[0] == hamiltonianMode;
+
+    cout << "Temperature threshold?" << endl;
+    cin >> Annealing::temperatureInteractionThreshold;
 
     // Enable/disable full log
     cout << "File to save all results (NONE for no saving)?" << endl;

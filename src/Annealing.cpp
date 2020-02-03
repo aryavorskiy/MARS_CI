@@ -11,10 +11,10 @@
 using namespace std;
 
 const float threshold = 0.001;
-const float interactionThreshold = 0.9;
 
 int Annealing::size = 100;
 BigFloat Annealing::interactionQuotient = BigFloat();
+float Annealing::temperatureInteractionThreshold = 2;
 
 void Annealing::setRandomize(float *setPtr) {
     for (int i = 0; i < size; ++i) {
@@ -60,16 +60,13 @@ BigFloat Annealing::prob(const float *setX, const float *setY) {  // Returns P
 float
 Annealing::interactionField(const float *block, int spinIndex, int setIndex, int linkIndex, bool hamiltonianLogMode,
                             BigFloat prob) {
-    if (block[spinIndex + setIndex * size] * block[spinIndex + linkIndex * size] == -1)
+    if (abs(block[spinIndex + setIndex * size] * block[spinIndex + linkIndex * size]) == 1)
         return 0;
-    if (abs(block[spinIndex + setIndex * size]) > interactionThreshold)
-        return 0.;
     if (hamiltonianLogMode) {
-        if (abs(block[spinIndex + linkIndex * size]) >= 1)
+        if (abs(block[spinIndex + linkIndex * size]) == 1)
             return (MAXFLOAT * block[spinIndex + linkIndex * size]);
-        float under_log_fraction = 1 + block[spinIndex + linkIndex * size];
-        under_log_fraction = under_log_fraction / (1 - block[spinIndex + linkIndex * size]);
-        return (float) (interactionQuotient / 2 * logf(under_log_fraction));
+        return (float) (interactionQuotient / 2 *
+                        logf((1 + block[spinIndex + linkIndex * size]) / (1 - block[spinIndex + linkIndex * size])));
     } else
         return (float) (interactionQuotient * (block[spinIndex + linkIndex * size] /
                                                (1 + block[spinIndex + setIndex * size] *
@@ -86,7 +83,7 @@ bool Annealing::iterateSet(float *mat, float *block, int setIndex, const vector<
     for (int spinIndex = 0; spinIndex < size; ++spinIndex) {
         // Calculate field
         BigFloat totalField(0);
-        if (currentTemp > 0)
+        if (currentTemp > temperatureInteractionThreshold)
             for (ulong i = 0; i < links.size(); i++) { // Evaluate linked sets interactions
                 float tField = interactionField(block, spinIndex, setIndex, links[i], hamiltonianLogMode,
                                                 probStorage[i]);
@@ -101,8 +98,6 @@ bool Annealing::iterateSet(float *mat, float *block, int setIndex, const vector<
         setNotStable = setNotStable || ((block[setIndex * size + spinIndex] - old > 0)
                                         ? (block[setIndex * size + spinIndex] - old > threshold)
                                         : (old - block[setIndex * size + spinIndex] > threshold));
-        if (abs(old - block[setIndex * size + spinIndex]) >= threshold)
-            int a = 0;  // DEBUG
 
         for (ulong i = 0; i < links.size(); i++)  // Recalculate P values
             if (1 + old * block[links[i] * size + spinIndex] != 0)
