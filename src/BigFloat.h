@@ -5,9 +5,9 @@
 #ifndef MARS_CI_BIGFLOAT_H
 #define MARS_CI_BIGFLOAT_H
 
+#include <cfloat>
 #include <cmath>
 #include <cstdlib>
-#include <cmath>
 
 class BigFloat {
 private:
@@ -82,14 +82,10 @@ public:
                _bigFloat.exponent > exponent ? false : mantissa > _bigFloat.mantissa;
     }
 
-    float ln() {
-        return logf(10) * float(this->exponent) + logf(this->mantissa);
-    }
-
     explicit operator float() {
         this->setupPrecision();
         if (exponent >= 38)  // Prevent overflow
-            return MAXFLOAT * (mantissa > 0 ? 1. : -1.);
+            return FLT_MAX * (mantissa > 0 ? 1. : -1.);
         return mantissa * exp10f((float) exponent);
     }
 

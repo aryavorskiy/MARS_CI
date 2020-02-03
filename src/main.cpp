@@ -11,7 +11,7 @@
 #include "BigFloat.h"
 
 #define VERSION "3.0";
-#define BUILD 1;
+#define BUILD 2;
 
 /*
  * TERMINOLOGY:

@@ -3,7 +3,7 @@
 //
 
 #include <vector>
-#include <cmath>
+#include <cfloat>
 #include "Annealing.h"
 #include "BigFloat.h"
 #include "OutputWriter.h"
@@ -64,7 +64,7 @@ Annealing::interactionField(const float *block, int spinIndex, int setIndex, int
         return 0;
     if (hamiltonianLogMode) {
         if (abs(block[spinIndex + linkIndex * size]) == 1)
-            return (MAXFLOAT * block[spinIndex + linkIndex * size]);
+            return (FLT_MAX * block[spinIndex + linkIndex * size]);
         return (float) (interactionQuotient / 2 *
                         logf((1 + block[spinIndex + linkIndex * size]) / (1 - block[spinIndex + linkIndex * size])));
     } else
