@@ -11,136 +11,133 @@
 #include "BigFloat.h"
 
 #define VERSION "3.0";
-#define BUILD 2;
+#define BUILD 4;
 
 /*
  * TERMINOLOGY:
  * Mat - describes J_ij lattice
  * Set - describes system mean spin values at certain state
  * Block - several sets which descend simultaneously and interact with each other
- * Link - A std::vector describing set interaction in a block
+ * Link - A std::std::vector describing set interaction in a block
  */
 
-using namespace std;
-using namespace Annealing;
-
-vector<string> matLoadModes{"RAND", "FILE_TABLE", "FILE_LIST"};
-vector<string> hamiltonianModes{"LOG", "NO_LOG"};
+std::vector<std::string> matLoadModes{"RAND", "FILE_TABLE", "FILE_LIST"};
+std::vector<std::string> hamiltonianModes{"LOG", "NO_LOG"};
 
 int main() {
-    cout << "MARS analysis by A. Yavorski, CPU edition, version " << VERSION
-    cout << ", build " << BUILD
-    cout << endl; // Wtf?! Doesn't work when in one line! FIXME
+    std::cout << "MARS analysis by A. Yavorski, CPU edition, version " << VERSION
+    std::cout << ", build " << BUILD
+    std::cout << std::endl; // Wtf?! Doesn't work when in one line! FIXME
 
     // Load temperature bounds
     float tempStart = 10, tempFinal = 10, annealingStep = 0.01;
-    cout << "Start temp?" << endl;
-    cin >> tempStart;
-    cout << "Final temp?" << endl;
-    cin >> tempFinal;
-    cout << "Annealing step?" << endl;
-    cin >> annealingStep;
+    std::cout << "Start temp?" << std::endl;
+    std::cin >> tempStart;
+    std::cout << "Final temp?" << std::endl;
+    std::cin >> tempFinal;
+    std::cout << "Annealing step?" << std::endl;
+    std::cin >> annealingStep;
 
     // Load lattice
-    string matLoadMode;
-    cout << "Lattice type?" << endl;
-    cin >> matLoadMode;
+    std::string matLoadMode;
+    std::cout << "Lattice type?" << std::endl;
+    std::cin >> matLoadMode;
     while (find(matLoadModes.begin(), matLoadModes.end(), matLoadMode) == matLoadModes.end()) {
-        cout << "Expected one of following: ";
-        for (const string &loadMode : matLoadModes)
-            cout << loadMode << ", ";
-        cout << endl;
-        cin >> matLoadMode;
+        std::cout << "Expected one of following: ";
+        for (const std::string &loadMode : matLoadModes)
+            std::cout << loadMode << ", ";
+        std::cout << std::endl;
+        std::cin >> matLoadMode;
     }
     float *J;
-    string matFilename;
+    std::string matFilename;
     switch ((int) (find(matLoadModes.begin(), matLoadModes.end(), matLoadMode) - matLoadModes.begin())) {
         case 0:
             // Random lattice
-            cout << "Lattice size?" << endl;
-            cin >> size;
-            J = new float[size * size];
+            std::cout << "Lattice size?" << std::endl;
+            std::cin >> Annealing::size;
+            J = new float[Annealing::size * Annealing::size];
             srand(10);  // Invariant seed for easier testing
-            matRandomize(J);
+            Annealing::matRandomize(J);
             break;
         case 1:
             // Load in table mode
-            cout << "File path?" << endl;
-            cin >> matFilename;
-            J = InputLoader::loadMatFromTable(matFilename, &size);
-            cout << "Lattice loaded, size: " << size << " (check). ";
+            std::cout << "File path?" << std::endl;
+            std::cin >> matFilename;
+            J = InputLoader::loadMatFromTable(matFilename, &Annealing::size);
+            std::cout << "Lattice loaded, size: " << Annealing::size << " (check). ";
             break;
         case 2:
             // Load in list mode
-            cout << "File path?" << endl;
-            cin >> matFilename;
-            J = InputLoader::loadMatFromList(matFilename, &size);
-            cout << "Lattice loaded, size: " << size << " (check). ";
+            std::cout << "File path?" << std::endl;
+            std::cin >> matFilename;
+            J = InputLoader::loadMatFromList(matFilename, &Annealing::size);
+            std::cout << "Lattice loaded, size: " << Annealing::size << " (check). ";
             break;
     }
 
     // Load block configuration
-    cout << "Thread quantity?" << endl;
+    std::cout << "Thread quantity?" << std::endl;
     int threads;
-    cin >> threads;
-    cout << "Block file location (Enter block size to create a random block)?" << endl;
-    string blockFilename;
-    cin >> blockFilename;
+    std::cin >> threads;
+    std::cout << "Block file location (Enter block size to create a random block)?" << std::endl;
+    std::string blockFilename;
+    std::cin >> blockFilename;
     int blockSize = 0;
     float *Blocks;
     bool randomizeBlocks;
     try {
         blockSize = stoi(blockFilename);
-        Blocks = new float[size * blockSize * threads];
+        Blocks = new float[Annealing::size * blockSize * threads];
         randomizeBlocks = true;
-    } catch (exception &e) {
-        auto ifs = ifstream(blockFilename);
+    } catch (std::exception &e) {
+        auto ifs = std::ifstream(blockFilename);
         ifs >> blockSize;
         ifs.close();
-        Blocks = new float[size * blockSize * threads];
+        Blocks = new float[Annealing::size * blockSize * threads];
         randomizeBlocks = false;
-        cout << "Block loaded, size: " << blockSize << " (check). ";
+        std::cout << "Block loaded, size: " << blockSize << " (check). ";
     }
     int blockQty;
-    cout << "Block quantity?" << endl;
-    cin >> blockQty;
+    std::cout << "Block quantity?" << std::endl;
+    std::cin >> blockQty;
 
     // Load link configuration
-    string linksFilename;
-    vector<vector<int>> allLinks;
-    cout << "Links file location (NONE for no interaction)?" << endl;
-    cin >> linksFilename;
+    std::string linksFilename;
+    std::vector<std::vector<int>> allLinks;
+    std::cout << "Links file location (NONE for no interaction)?" << std::endl;
+    std::cin >> linksFilename;
     if (linksFilename == "NONE")
-        allLinks = vector<vector<int >>(size, vector<int>{});
+        allLinks = std::vector<std::vector<int >>(Annealing::size, std::vector<int>{});
     else
         allLinks = InputLoader::loadLinks(linksFilename);
 
     // Interaction quotient
-    cout << "Interaction quotient (decimal log)?" << endl;
+    std::cout << "Interaction quotient (decimal log)?" << std::endl;
     float fQuotient;
-    cin >> fQuotient;
-    interactionQuotient = BigFloat(exp10f(fQuotient - (int) fQuotient), (int) fQuotient);
+    std::cin >> fQuotient;
+    Annealing::interactionQuotient = BigFloat(exp10f(fQuotient - (int) fQuotient), (int) fQuotient);
 
     // Hamiltonian mode: log or not log
-    string hamiltonianMode;
-    cout << "Hamiltonian mode?" << endl;
-    cin >> hamiltonianMode;
+    std::string hamiltonianMode;
+    std::cout << "Hamiltonian mode?" << std::endl;
+    std::cin >> hamiltonianMode;
     while (find(hamiltonianModes.begin(), hamiltonianModes.end(), hamiltonianMode) == hamiltonianModes.end()) {
-        cout << "Expected one of following: ";
-        for (const string &hamMode : hamiltonianModes)
-            cout << hamMode << ", ";
-        cout << endl;
-        cin >> hamiltonianMode;
+        std::cout << "Expected one of following: ";
+        for (const std::string &hamMode : hamiltonianModes)
+            std::cout << hamMode << ", ";
+        std::cout << std::endl;
+        std::cin >> hamiltonianMode;
     }
     bool hamiltonianLog = hamiltonianModes[0] == hamiltonianMode;
 
-    cout << "Temperature threshold?" << endl;
-    cin >> Annealing::temperatureInteractionThreshold;
+    std::cout << "Temperature threshold?" << std::endl;
+    std::cin >> Annealing::temperatureInteractionThreshold;
 
     // Enable/disable full log
-    cout << "File to save all results (NONE for no saving)?" << endl;
-    string resultsFileName;
-    cin >> resultsFileName;
+    std::cout << "File to save all results (NONE for no saving)?" << std::endl;
+    std::string resultsFileName;
+    std::cin >> resultsFileName;
     if (resultsFileName != "NONE")
         OutputWriter::setUpResultWriting(resultsFileName);
 
@@ -155,14 +152,15 @@ int main() {
                 runningFlags[thrIndex] = false;
                 if (randomizeBlocks)
                     for (int j = 0; j < blockSize; ++j)
-                        setRandomize(Blocks + size * blockSize * thrIndex + size * j);
+                        Annealing::setRandomize(Blocks + Annealing::size * blockSize * thrIndex + Annealing::size * j);
                 else
-                    InputLoader::loadBlock(blockFilename, Blocks + size * blockSize * thrIndex, size);
+                    InputLoader::loadBlock(blockFilename, Blocks + Annealing::size * blockSize * thrIndex,
+                                           Annealing::size);
 
                 // Launch new run on a separate thread
-                thread(anneal, J, Blocks + size * blockSize * thrIndex, blockSize,
-                       tempStart + ((float) launchedThrCount / (float) blockQty) * (tempFinal - tempStart),
-                       annealingStep, runningFlags + thrIndex, allLinks, hamiltonianLog).detach();
+                std::thread(Annealing::anneal, J, Blocks + Annealing::size * blockSize * thrIndex, blockSize,
+                            tempStart + ((float) launchedThrCount / (float) blockQty) * (tempFinal - tempStart),
+                            annealingStep, runningFlags + thrIndex, allLinks, hamiltonianLog).detach();
                 launchedThrCount++;
             }
 

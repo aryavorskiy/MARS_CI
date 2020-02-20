@@ -12,22 +12,20 @@
 #include <iostream>
 #include "Annealing.h"
 
-using namespace std;
-
 
 namespace OutputWriter {
-    extern mutex resultWriteMutex;
-    extern mutex printMutex;
-    extern ofstream resultWriter;
+    extern std::mutex resultWriteMutex;
+    extern std::mutex printMutex;
+    extern std::ofstream resultWriter;
     extern bool writeResultsToFile;
 
-    void setUpResultWriting(const string &fileName);
+    void setUpResultWriting(const std::string &fileName);
 
-    void writeLine(const string &line);
+    void writeLine(const std::string &line);
 
-    void writeBlock(float *mat, float *block, int blockSize);
+    void writeBlock(float *mat, float *block, std::vector<std::vector<int>> allLinks, int blockSize);
 
-    void onResultsWritten(const string &postfix = "");
+    void onResultsWritten(const std::string &postfix = "");
 
     void outputResultsOnStart(float *mat, float *block, int blockSize, float startTemp);
 
@@ -35,7 +33,7 @@ namespace OutputWriter {
 
     void
     outputResultsOnFinish(float *mat, float *block, int blockSize, float startTemp, int size,
-                          vector<vector<int>> allLinks,
+                          std::vector<std::vector<int>> allLinks,
                           int stepCounter);
 };
 

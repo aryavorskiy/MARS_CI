@@ -8,8 +8,6 @@
 #include "BigFloat.h"
 #include "OutputWriter.h"
 
-using namespace std;
-
 const float threshold = 0.001;
 
 int Annealing::size = 100;
@@ -60,10 +58,10 @@ BigFloat Annealing::prob(const float *setX, const float *setY) {  // Returns P
 float
 Annealing::interactionField(const float *block, int spinIndex, int setIndex, int linkIndex, bool hamiltonianLogMode,
                             BigFloat prob) {
-    if (abs(block[spinIndex + setIndex * size] * block[spinIndex + linkIndex * size]) == 1)
+    if (std::abs(block[spinIndex + setIndex * size] * block[spinIndex + linkIndex * size]) == 1)
         return 0;
     if (hamiltonianLogMode) {
-        if (abs(block[spinIndex + linkIndex * size]) == 1)
+        if (std::abs(block[spinIndex + linkIndex * size]) == 1)
             return (FLT_MAX * block[spinIndex + linkIndex * size]);
         return (float) (interactionQuotient / 2 *
                         logf((1 + block[spinIndex + linkIndex * size]) / (1 - block[spinIndex + linkIndex * size])));
@@ -73,7 +71,7 @@ Annealing::interactionField(const float *block, int spinIndex, int setIndex, int
                                                     block[spinIndex + linkIndex * size])) * prob);
 }
 
-bool Annealing::iterateSet(float *mat, float *block, int setIndex, const vector<int> &links, float currentTemp,
+bool Annealing::iterateSet(float *mat, float *block, int setIndex, const std::vector<int> &links, float currentTemp,
                            bool hamiltonianLogMode) {
     auto *probStorage = new BigFloat[links.size()];
     for (ulong i = 0; i < links.size(); i++)
@@ -109,7 +107,7 @@ bool Annealing::iterateSet(float *mat, float *block, int setIndex, const vector<
 }
 
 void Annealing::anneal(float *mat, float *block, int blockSize, float startTemp, float tempStep, bool *thrInactive,
-                       vector<vector<int>> allLinks, bool hamiltonianMode) {
+                       std::vector<std::vector<int>> allLinks, bool hamiltonianMode) {
     OutputWriter::outputResultsOnStart(mat, block, blockSize, startTemp);
 
     int stepCounter = 0;

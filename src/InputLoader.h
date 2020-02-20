@@ -8,12 +8,10 @@
 #ifndef MARS_2_INPUTLOADER_H
 #define MARS_2_INPUTLOADER_H
 
-using namespace std;
-
 class InputLoader {
 public:
-    static float *loadMatFromTable(const string &filename, int *size) {
-        auto ifs = ifstream(filename);
+    static float *loadMatFromTable(const std::string &filename, int *size) {
+        auto ifs = std::ifstream(filename);
         ifs >> *size;
         auto J = new float[*size * *size];
         for (int i = 0; i < *size; ++i)
@@ -28,8 +26,8 @@ public:
         return J;
     }
 
-    static float *loadMatFromList(const string &filename, int *size) {
-        ifstream ifs(filename);
+    static float *loadMatFromList(const std::string &filename, int *size) {
+        std::ifstream ifs(filename);
         int edgeCount;
         ifs >> *size >> edgeCount;
         auto J = new float[*size * *size];
@@ -47,12 +45,12 @@ public:
         return J;
     }
 
-    static int loadBlock(const string &filename, float *blockAddr, int matSize) {
+    static int loadBlock(const std::string &filename, float *blockAddr, int matSize) {
         // blockSize will be written; matSize - mat size
-        auto ifs = ifstream(filename);
+        auto ifs = std::ifstream(filename);
         int blockSize;
         ifs >> blockSize;
-        string line;
+        std::string line;
         getline(ifs, line);
 
         for (int confIndex = 0; confIndex < blockSize; ++confIndex) { // Read the block
@@ -64,7 +62,7 @@ public:
                     blockAddr[confIndex * matSize + i] = 2 * (float) rand() / (float) RAND_MAX - 1;
 
             } else { // Read line from line buffer
-                stringstream lineParser(line);
+                std::stringstream lineParser(line);
                 for (int i = 0; i < matSize; ++i) {
                     float buf;
                     lineParser >> buf;
@@ -75,15 +73,15 @@ public:
         return blockSize;
     }
 
-    static vector<vector<int>> loadLinks(const string &filename) {
-        vector<vector<int>> outAllLinks = vector<vector<int>>();
-        auto ifs = ifstream(filename);
+    static std::vector<std::vector<int>> loadLinks(const std::string &filename) {
+        std::vector<std::vector<int>> outAllLinks = std::vector<std::vector<int>>();
+        auto ifs = std::ifstream(filename);
         int blockSize;
         ifs >> blockSize;
-        string line;
+        std::string line;
         getline(ifs, line);
         for (int lineIndex = 0; lineIndex < blockSize; ++lineIndex) {
-            vector<int> links = vector<int>();
+            std::vector<int> links = std::vector<int>();
             getline(ifs, line);
             if (line == "EMPTY" || line == "NONE") { // Set interacts with no others
                 outAllLinks.push_back(links);
@@ -100,14 +98,14 @@ public:
                 continue;
             }
 
-            stringstream lineParser = stringstream(line); // Line needs parsing
+            std::stringstream lineParser = std::stringstream(line); // Line needs parsing
             for (int j = 0; j < blockSize; ++j) {
                 int buf;
                 try {
                     lineParser >> buf;
                     if (links.empty() || buf != links.back()) // Duplicates are ignored
                         links.push_back(buf);
-                } catch (exception &e) { // Invalid line --> ignore
+                } catch (std::exception &e) { // Invalid line --> ignore
                     j = blockSize;
                 }
             }
