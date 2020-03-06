@@ -57,16 +57,6 @@ private:
         return *this;
     }
 
-    BigFloat getInstance() {
-        return BigFloat(mantissa, exponent);
-    }
-
-public:
-    explicit BigFloat(float _base = 0, long _exp = 0) {
-        mantissa = _base;
-        exponent = _exp;
-        setupPrecision();
-    }
 
     bool equals(BigFloat _bigFloat) {
         setupPrecision();
@@ -80,6 +70,18 @@ public:
         return mantissa * _bigFloat.mantissa <= 0 ? mantissa > _bigFloat.mantissa :
                exponent > _bigFloat.exponent ? true :
                _bigFloat.exponent > exponent ? false : mantissa > _bigFloat.mantissa;
+    }
+
+
+    BigFloat getInstance() {
+        return BigFloat(mantissa, exponent);
+    }
+
+public:
+    explicit BigFloat(float _base = 0, long _exp = 0) {
+        mantissa = _base;
+        exponent = _exp;
+        setupPrecision();
     }
 
     explicit operator float() {

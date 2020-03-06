@@ -1,17 +1,17 @@
 #include <iostream>
 #include <cmath>
+#include <fstream>
 #include <thread>
 #include <mutex>
 #include <vector>
-#include <algorithm>
 
-#include "InputLoader.h"
-#include "Annealing.h"
-#include "OutputWriter.h"
-#include "BigFloat.h"
+#include "lib/BigFloat.h"
+#include "lib/Lattice.h"
+#include "BlockTemplate.h"
+#include "AnnealingRun.h"
 
-#define VERSION "3.0";
-#define BUILD 4;
+#define VERSION "3.2"
+#define BUILD 1
 
 /*
  * TERMINOLOGY:
@@ -21,154 +21,159 @@
  * Link - A std::std::vector describing set interaction in a block
  */
 
-std::vector<std::string> matLoadModes{"RAND", "FILE_TABLE", "FILE_LIST"};
-std::vector<std::string> hamiltonianModes{"LOG", "NO_LOG"};
+template<typename T>
+std::ostream &operator<<(std::ostream &out, AnnealingRun<T> run) {
+    for (int set_index = 0; set_index < run.block.set_count; ++set_index) {
+        out << "Set #" << set_index << "; ";
+        switch (run.block[set_index].set_type) {
+            case INDEPENDENT:
+                out << "Type: Independent; ";
+                break;
+            case DEPENDENT:
+                out << "Type: Dependent; ";
+                break;
+            case NO_ANNEAL:
+                out << "Type: No_anneal; ";
+                break;
+        }
+        out << "Hamiltonian: " << run.block[set_index].hamiltonian(run.matrix) << "; Data:" << std::endl;
+        for (int spin_index = 0; spin_index < run.block.set_size; ++spin_index)
+            out << run.block[set_index][spin_index] << " ";
+        out << std::endl;
+    }
+    return out;
+}
+
+template<typename T>
+void anneal_output_silent(AnnealingRun<T> run) {
+    float start_temp = run.temperature;
+    run.anneal();
+    std::cout << start_temp;
+    for (int set_index = 0; set_index < run.block.set_count; ++set_index) {
+        switch (run[set_index].set_type) {
+            case INDEPENDENT:
+                std::cout << " <" << run[set_index].hamiltonian(run.matrix) << ">";
+                break;
+            case NO_ANNEAL:
+                std::cout << " (" << run[set_index].hamiltonian(run.matrix) << ")";
+                break;
+            default:
+                std::cout << " " << run[set_index].hamiltonian(run.matrix);
+                break;
+        }
+    }
+    std::cout << std::endl;
+}
+
+template<typename T>
+void anneal_output(AnnealingRun<T> run, std::string results_filename) {
+    std::ofstream file_stream = std::ofstream(results_filename);
+    float start_temp = run.temperature;
+    file_stream << "Started processing block from temperature " << start_temp << ":" << std::endl;
+    file_stream << run << std::endl;
+    anneal_output_silent(run);
+    file_stream << "Finished processing block; Start temperature was " << start_temp << "; Took " << run.step_counter
+                << " steps; Block data:" << std::endl;
+    file_stream << run << std::endl;
+}
 
 int main() {
-    std::cout << "MARS analysis by A. Yavorski, CPU edition, version " << VERSION
-    std::cout << ", build " << BUILD
-    std::cout << std::endl; // Wtf?! Doesn't work when in one line! FIXME
+    typedef float value_type;
+    std::cout << "MARS analysis by A. Yavorski, CPU edition, version " << VERSION << ", build " << BUILD << std::endl;
 
     // Load temperature bounds
-    float tempStart = 10, tempFinal = 10, annealingStep = 0.01;
+    float temp_start = 10, temp_final = 10, annealing_step = 0.01;
     std::cout << "Start temp?" << std::endl;
-    std::cin >> tempStart;
+    std::cin >> temp_start;
     std::cout << "Final temp?" << std::endl;
-    std::cin >> tempFinal;
+    std::cin >> temp_final;
     std::cout << "Annealing step?" << std::endl;
-    std::cin >> annealingStep;
+    std::cin >> annealing_step;
 
     // Load lattice
-    std::string matLoadMode;
-    std::cout << "Lattice type?" << std::endl;
-    std::cin >> matLoadMode;
-    while (find(matLoadModes.begin(), matLoadModes.end(), matLoadMode) == matLoadModes.end()) {
-        std::cout << "Expected one of following: ";
-        for (const std::string &loadMode : matLoadModes)
-            std::cout << loadMode << ", ";
-        std::cout << std::endl;
-        std::cin >> matLoadMode;
+    Lattice<value_type> lattice;
+    std::string lattice_initializer;
+    std::cout << "Lattice file path (or size if random matrix needed)?" << std::endl;
+    std::cin >> lattice_initializer;
+    try {
+        // User entered size
+        lattice = Lattice<value_type>(std::stoi(lattice_initializer), true);
     }
-    float *J;
-    std::string matFilename;
-    switch ((int) (find(matLoadModes.begin(), matLoadModes.end(), matLoadMode) - matLoadModes.begin())) {
-        case 0:
-            // Random lattice
-            std::cout << "Lattice size?" << std::endl;
-            std::cin >> Annealing::size;
-            J = new float[Annealing::size * Annealing::size];
-            srand(10);  // Invariant seed for easier testing
-            Annealing::matRandomize(J);
-            break;
-        case 1:
-            // Load in table mode
-            std::cout << "File path?" << std::endl;
-            std::cin >> matFilename;
-            J = InputLoader::loadMatFromTable(matFilename, &Annealing::size);
-            std::cout << "Lattice loaded, size: " << Annealing::size << " (check). ";
-            break;
-        case 2:
-            // Load in list mode
-            std::cout << "File path?" << std::endl;
-            std::cin >> matFilename;
-            J = InputLoader::loadMatFromList(matFilename, &Annealing::size);
-            std::cout << "Lattice loaded, size: " << Annealing::size << " (check). ";
-            break;
+    catch (std::exception &e) {
+        // User entered path
+        lattice = Lattice<value_type>(lattice_initializer);
     }
 
-    // Load block configuration
+    // Load thread quantity
     std::cout << "Thread quantity?" << std::endl;
     int threads;
     std::cin >> threads;
+
+    // Load block
     std::cout << "Block file location (Enter block size to create a random block)?" << std::endl;
-    std::string blockFilename;
-    std::cin >> blockFilename;
-    int blockSize = 0;
-    float *Blocks;
-    bool randomizeBlocks;
-    try {
-        blockSize = stoi(blockFilename);
-        Blocks = new float[Annealing::size * blockSize * threads];
-        randomizeBlocks = true;
-    } catch (std::exception &e) {
-        auto ifs = std::ifstream(blockFilename);
-        ifs >> blockSize;
-        ifs.close();
-        Blocks = new float[Annealing::size * blockSize * threads];
-        randomizeBlocks = false;
-        std::cout << "Block loaded, size: " << blockSize << " (check). ";
-    }
-    int blockQty;
+    std::string block_filename;
+    std::cin >> block_filename;
+
+    int block_count;
     std::cout << "Block quantity?" << std::endl;
-    std::cin >> blockQty;
+    std::cin >> block_count;
 
     // Load link configuration
-    std::string linksFilename;
+    std::string links_filename;
     std::vector<std::vector<int>> allLinks;
     std::cout << "Links file location (NONE for no interaction)?" << std::endl;
-    std::cin >> linksFilename;
-    if (linksFilename == "NONE")
-        allLinks = std::vector<std::vector<int >>(Annealing::size, std::vector<int>{});
-    else
-        allLinks = InputLoader::loadLinks(linksFilename);
+    std::cin >> links_filename;
 
-    // Interaction quotient
-    std::cout << "Interaction quotient (decimal log)?" << std::endl;
-    float fQuotient;
-    std::cin >> fQuotient;
-    Annealing::interactionQuotient = BigFloat(exp10f(fQuotient - (int) fQuotient), (int) fQuotient);
-
-    // Hamiltonian mode: log or not log
-    std::string hamiltonianMode;
-    std::cout << "Hamiltonian mode?" << std::endl;
-    std::cin >> hamiltonianMode;
-    while (find(hamiltonianModes.begin(), hamiltonianModes.end(), hamiltonianMode) == hamiltonianModes.end()) {
-        std::cout << "Expected one of following: ";
-        for (const std::string &hamMode : hamiltonianModes)
-            std::cout << hamMode << ", ";
-        std::cout << std::endl;
-        std::cin >> hamiltonianMode;
+    BlockTemplate<value_type> block_template;
+    try {
+        int block_size = stoi(block_filename);
+        block_template = BlockTemplate<value_type>(lattice.size(), block_size, links_filename);
+    } catch (std::exception &e) {
+        block_template = BlockTemplate<value_type>(lattice.size(), block_filename, links_filename);
     }
-    bool hamiltonianLog = hamiltonianModes[0] == hamiltonianMode;
+
+    // Interaction multiplier
+    std::cout << "Interaction multiplier (decimal log)?" << std::endl;
+    float mul_log;
+    std::cin >> mul_log;
+    BigFloat interaction_multiplier = BigFloat(exp10f(mul_log - (int) mul_log), (int) mul_log);
 
     std::cout << "Temperature threshold?" << std::endl;
-    std::cin >> Annealing::temperatureInteractionThreshold;
+    float temp_interaction_threshold;
+    std::cin >> temp_interaction_threshold;
 
     // Enable/disable full log
     std::cout << "File to save all results (NONE for no saving)?" << std::endl;
-    std::string resultsFileName;
-    std::cin >> resultsFileName;
-    if (resultsFileName != "NONE")
-        OutputWriter::setUpResultWriting(resultsFileName);
+    std::string results_filename;
+    std::cin >> results_filename;
 
     // Start annealing
-    bool *runningFlags = new bool[threads];
-    for (int thrIndex = 0; thrIndex < threads; ++thrIndex)
-        runningFlags[thrIndex] = true;
-    int launchedThrCount = 0;
-    while (launchedThrCount < blockQty)
+    bool *thread_flags = new bool[threads]{true};
+    int threads_launched = 0;
+    while (threads_launched < block_count)
         for (int thrIndex = 0; thrIndex < threads; thrIndex++)
-            if (runningFlags[thrIndex] && launchedThrCount < blockQty) {  // Free place for thread detected
-                runningFlags[thrIndex] = false;
-                if (randomizeBlocks)
-                    for (int j = 0; j < blockSize; ++j)
-                        Annealing::setRandomize(Blocks + Annealing::size * blockSize * thrIndex + Annealing::size * j);
-                else
-                    InputLoader::loadBlock(blockFilename, Blocks + Annealing::size * blockSize * thrIndex,
-                                           Annealing::size);
+            if (thread_flags[thrIndex] and threads_launched < block_count) {  // Free place for thread detected
+                thread_flags[thrIndex] = false;
+                AnnealingRun<value_type> run = AnnealingRun<value_type>(lattice);
+                run.block = block_template.instance();
+                run.temperature =
+                        temp_start + ((float) threads_launched / (float) block_count) * (temp_final - temp_start);
+                run.temperature_step = annealing_step;
+                run.interaction_multiplier = interaction_multiplier;
 
                 // Launch new run on a separate thread
-                std::thread(Annealing::anneal, J, Blocks + Annealing::size * blockSize * thrIndex, blockSize,
-                            tempStart + ((float) launchedThrCount / (float) blockQty) * (tempFinal - tempStart),
-                            annealingStep, runningFlags + thrIndex, allLinks, hamiltonianLog).detach();
-                launchedThrCount++;
+                if (results_filename == "NONE")
+                    std::thread(anneal_output_silent<value_type>, run).detach();
+                else {
+                    std::thread(anneal_output<value_type>, run, results_filename).detach();
+                }
+                threads_launched++;
             }
 
-    bool runningFlag = true;
-    while (runningFlag) {
-        runningFlag = false;
+    bool any_threads_running = true;
+    while (any_threads_running) {
+        any_threads_running = false;
         for (int i = 0; i < threads; i++)
-            runningFlag = (runningFlag || !runningFlags[i]);
+            any_threads_running = (any_threads_running || !thread_flags[i]);
     }
-    OutputWriter::onResultsWritten();
 }

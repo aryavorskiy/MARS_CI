@@ -14,8 +14,8 @@ import time
 #############################################################################
 
 # These lines can be edited
-REQUIRED_PARAMS = ['start', 'end', 'step', 'lat_type', 'lat_arg', 'threads', 'block_data', 'block_qty', 'links',
-                   'int_q', 'hamiltonian_mode', 'temp_threshold', 'results']  # Aliases of the program's run parameters
+REQUIRED_PARAMS = ['start', 'end', 'step', 'lat_arg', 'threads', 'block_data', 'block_qty', 'links',
+                   'int_q', 'temp_threshold', 'results']  # Aliases of the program's run parameters
 PROGRAM_FILENAME = './cmake-build-release/MARS_CI'  # Path to launch the program
 QUESTION_SUFFIX = '?'  # If a line of the program's stdout ends with this, a new parameter is written to its stdin
 
@@ -129,7 +129,7 @@ def session(session_params: dict) -> None:
         print('Session aborted\n')
         return
     print('Check')
-    filename = session_params.get('file', 'data')
+    filename = session_params.get('file', 'lib')
     file_writer = open(filename, session_params.get('write_mode', 'a+'))
     proc = subprocess.Popen([PROGRAM_FILENAME], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                             universal_newlines=True)
