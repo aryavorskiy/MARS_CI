@@ -17,7 +17,7 @@ private:
 public:
     Lattice() : mat_size(0), mat_values(nullptr) {};
 
-    Lattice(int _size, bool randomize = false);
+    explicit Lattice(int _size, bool randomize = false);
 
     explicit Lattice(const std::string &_filename);
 

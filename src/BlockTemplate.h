@@ -40,10 +40,13 @@ public:
 
 template<typename T>
 struct RandomSet : Set<T> {
-    RandomSet() {}
+    RandomSet() = default;
 
-    T operator[](int index) {
-        return 2 * (float) rand() / (float) RAND_MAX - 1;
+    RandomSet(int size) {
+        this->set_size = size;
+        this->set_values = new T[size];
+        for (int spin_index = 0; spin_index < size; ++spin_index)
+            this->set_values[spin_index] = 2 * (float) rand() / (float) RAND_MAX - 1;
     }
 };
 
@@ -130,6 +133,8 @@ template<typename T>
 BlockTemplate<T>::BlockTemplate(int set_size, int set_count, const std::string &link_filename) :
         set_size(set_size), set_count(set_count) {
     sets = new RandomSet<T>[set_count];
+    for (int set_index = 0; set_index < set_count; ++set_index)
+        sets[set_index] = RandomSet<T>(set_size);
 
     // Initialize links
     loadLinks(link_filename);

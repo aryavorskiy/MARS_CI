@@ -12,6 +12,7 @@
 
 #define VERSION "3.2"
 #define BUILD 1
+#define NO_INPUT
 
 /*
  * TERMINOLOGY:
@@ -83,18 +84,23 @@ int main() {
 
     // Load temperature bounds
     float temp_start = 10, temp_final = 10, annealing_step = 0.01;
+#ifndef NO_INPUT
     std::cout << "Start temp?" << std::endl;
     std::cin >> temp_start;
     std::cout << "Final temp?" << std::endl;
     std::cin >> temp_final;
     std::cout << "Annealing step?" << std::endl;
     std::cin >> annealing_step;
+#endif
 
     // Load lattice
     Lattice<value_type> lattice;
-    std::string lattice_initializer;
+    std::string lattice_initializer = "100";
+#ifndef NO_INPUT
     std::cout << "Lattice file path (or size if random matrix needed)?" << std::endl;
     std::cin >> lattice_initializer;
+#endif
+
     try {
         // User entered size
         lattice = Lattice<value_type>(std::stoi(lattice_initializer), true);
@@ -105,24 +111,28 @@ int main() {
     }
 
     // Load thread quantity
+    int threads = 1;
+#ifndef NO_INPUT
     std::cout << "Thread quantity?" << std::endl;
-    int threads;
     std::cin >> threads;
+#endif
 
     // Load block
+    std::string block_filename = "1";
+    int block_count = 1;
+#ifndef NO_INPUT
     std::cout << "Block file location (Enter block size to create a random block)?" << std::endl;
-    std::string block_filename;
     std::cin >> block_filename;
-
-    int block_count;
     std::cout << "Block quantity?" << std::endl;
     std::cin >> block_count;
+#endif
 
     // Load link configuration
-    std::string links_filename;
-    std::vector<std::vector<int>> allLinks;
+    std::string links_filename = "NONE";
+#ifndef NO_INPUT
     std::cout << "Links file location (NONE for no interaction)?" << std::endl;
     std::cin >> links_filename;
+#endif
 
     BlockTemplate<value_type> block_template;
     try {
@@ -133,19 +143,26 @@ int main() {
     }
 
     // Interaction multiplier
+    float mul_log = 0;
+#ifndef NO_INPUT
     std::cout << "Interaction multiplier (decimal log)?" << std::endl;
-    float mul_log;
     std::cin >> mul_log;
+#endif
+
     BigFloat interaction_multiplier = BigFloat(exp10f(mul_log - (int) mul_log), (int) mul_log);
 
+    float temp_interaction_threshold = 1;
+#ifndef NO_INPUT
     std::cout << "Temperature threshold?" << std::endl;
-    float temp_interaction_threshold;
     std::cin >> temp_interaction_threshold;
+#endif
 
     // Enable/disable full log
+    std::string results_filename = "NONE";
+#ifndef NO_INPUT
     std::cout << "File to save all results (NONE for no saving)?" << std::endl;
-    std::string results_filename;
     std::cin >> results_filename;
+#endif
 
     // Start annealing
     bool *thread_flags = new bool[threads]{true};
@@ -154,7 +171,7 @@ int main() {
         for (int thrIndex = 0; thrIndex < threads; thrIndex++)
             if (thread_flags[thrIndex] and threads_launched < block_count) {  // Free place for thread detected
                 thread_flags[thrIndex] = false;
-                AnnealingRun<value_type> run = AnnealingRun<value_type>(lattice);
+                AnnealingRun<value_type> run = AnnealingRun<value_type>(std::ref(lattice));
                 run.block = block_template.instance();
                 run.temperature =
                         temp_start + ((float) threads_launched / (float) block_count) * (temp_final - temp_start);

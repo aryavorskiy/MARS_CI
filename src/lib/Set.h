@@ -18,7 +18,7 @@ enum SetType {
 
 template<typename T>
 class Set {
-private:
+protected:
     int set_size;
     T *set_values;
 public:
@@ -30,7 +30,7 @@ public:
 
     Set(int size, T *set_values, SetType set_type);
 
-    T &operator[](int index);
+    virtual T &operator[](int index);
 
     T hamiltonian(Lattice<T> matrix);
 };
