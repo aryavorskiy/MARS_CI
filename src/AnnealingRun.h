@@ -10,6 +10,11 @@
 #include "lib/Block.h"
 #include "lib/Set.h"
 
+/**
+ * Represents a single run of the algorithm.
+ * Contains all required information
+ * @tparam T Spin and Lattice element value type
+ */
 template<typename T>
 struct AnnealingRun {
     float temperature, temperature_step, temperature_threshold;
@@ -18,13 +23,27 @@ struct AnnealingRun {
     Block<T> block;
     int step_counter;
 
-
+    /**
+     * Minimal AnnealingRun constructor.
+     * @param lattice Lattice object
+     */
     explicit AnnealingRun(Lattice<T> &lattice);;
 
+    /**
+     * Get a Set from the Block object.
+     * @param index Set index in block
+     * @return Set object
+     */
     Set<T> operator[](int index);
 
+    /**
+     * Perform a single annealing step so that the spin values correspond the mean-field equation.
+     */
     void annealingStep();
 
+    /**
+     * Perform a full annealing operation.
+     */
     void anneal();
 };
 

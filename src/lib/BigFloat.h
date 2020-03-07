@@ -9,6 +9,9 @@
 #include <cmath>
 #include <cstdlib>
 
+/**
+ * Represents a floating-point variable with upper bound about 1e(2^32).
+ */
 class BigFloat {
 private:
     float mantissa;

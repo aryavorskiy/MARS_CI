@@ -9,21 +9,46 @@
 #include <fstream>
 #include "Random.h"
 
-
+/**
+ * Represents a bi-dimensional square lattice that describes spin interaction.
+ * @tparam T
+ */
 template<typename T>
 class Lattice {
 private:
     int mat_size;
     T *mat_values;
 public:
+    /**
+     * Default Lattice constructor.
+     */
     Lattice() : mat_size(0), mat_values(nullptr) {};
 
+    /**
+     * Empty or random Lattice constructor.
+     * @param _size Lattice size
+     * @param randomize False to set all lattice elements to zero, True to randomize them
+     */
     explicit Lattice(int _size, bool randomize = false);
 
+    /**
+     * Lattice constructor that loads element values from specified filename.
+     * @param _filename Filename where Lattice values are stored
+     */
     explicit Lattice(const std::string &_filename);
 
-    T operator()(int x, int y);
+    /**
+     * Get element value by indices.
+     * @param x Column index
+     * @param y Row index
+     * @return Element value
+     */
+    T &operator()(int x, int y);
 
+    /**
+     * Get Lattice size.
+     * @return Lattice size
+     */
     int size();
 };
 
@@ -53,7 +78,7 @@ Lattice<T>::Lattice(int _size, bool randomize) {
     for (int i = 0; i < mat_size; ++i) {
         for (int j = 0; j < mat_size; ++j) {
             if (randomize and i > j) {
-                mat_values[i * mat_size + j] = mat_values[j * mat_size + i] = Random::uniform();
+                mat_values[i * mat_size + j] = mat_values[j * mat_size + i] = Random::uniform(-1, 1);
             } else if (not randomize or i == j) {
                 mat_values[i * mat_size + j] = 0;
             }
@@ -62,7 +87,7 @@ Lattice<T>::Lattice(int _size, bool randomize) {
 }
 
 template<typename T>
-T Lattice<T>::operator()(int x, int y) {
+T &Lattice<T>::operator()(int x, int y) {
     // TODO(aryavorskiy): Probably another operator should be used here
     return mat_values[x * mat_size + y];
 }

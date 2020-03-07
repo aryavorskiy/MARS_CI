@@ -7,13 +7,26 @@
 
 #include <cstdlib>
 
+/**
+ * This namespace contains all operations required to work with random numbers.
+ */
 namespace Random {
+    /**
+     * Initialize random generator with specified seed.
+     * @param seed Seed value
+     */
     void init(uint seed) {
         srand(seed);
     }
 
-    double uniform() {
-        return 2 * (double) std::rand() / (double) RAND_MAX - 1;
+    /**
+     * Get uniformly distributed random value in specified bounds.
+     * @param min Lower bound
+     * @param max Upper bound
+     * @return Random value
+     */
+    double uniform(double min, double max) {
+        return (max - min) * (double) std::rand() / (double) RAND_MAX + min;
         // TODO(aryavorskiy): Implement another random generator
     }
 }

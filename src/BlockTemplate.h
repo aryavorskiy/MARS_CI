@@ -15,6 +15,11 @@
 #include "BlockTemplate.h"
 #include "lib/Set.h"
 
+/**
+ * Represents a structure that can make a block that matches a given template.
+ * The BlockTemplate<T>::instance method creates a new instance of a Block object.
+ * @tparam T Block spin value type
+ */
 template<typename T>
 class BlockTemplate {
 private:
@@ -25,17 +30,43 @@ private:
     Set<T> *sets;
     set_link *links;
 
+    /**
+     * Load link information from specified file.
+     * @param link_filename Filename where link data is stored
+     */
     void loadLinks(const std::string &link_filename);
 
 public:
+    /**
+     * Default BlockTemplate constructor.
+     */
     BlockTemplate() : set_size(0), set_count(0), sets(nullptr), links(nullptr) {};
 
-    BlockTemplate(int set_size, const std::string &block_filename, const std::string &link_filename);
-
+    /**
+     * BlockTemplate constructor that creates an empty block.
+     * @param set_size Size of sets in block
+     * @param set_count Quantity of Sets in block
+     * @param link_filename Filename where link data is stored
+     */
     BlockTemplate(int set_size, int set_count, const std::string &link_filename);
 
+    /**
+     * BlockTemplate constructor that loads data from specified files.
+     * @param set_size Size of sets in block
+     * @param block_filename Filename where block template data is stored
+     * @param link_filename Filename where link data is stored
+     */
+    BlockTemplate(int set_size, const std::string &block_filename, const std::string &link_filename);
+
+    /**
+     * Create a Block object that matches the template.
+     * @return Block object
+     */
     Block<T> instance();
 
+    /**
+     * @return Quantity of Sets in block
+     */
     int size();
 };
 
@@ -49,7 +80,7 @@ struct RandomSet : Set<T> {
     }
 
     T operator()(int) {
-        return Random::uniform();
+        return Random::uniform(-1, 1);
     }
 };
 

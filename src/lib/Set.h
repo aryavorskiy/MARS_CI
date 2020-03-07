@@ -9,13 +9,17 @@
 #include "Lattice.h"
 
 enum SetType {
-    INDEPENDENT,
-    DEPENDENT,
-    NO_ANNEAL,
-    UNDEFINED,
-    EMPTY
+    INDEPENDENT,    // Does not interact with other sets
+    DEPENDENT,      // Interacts with some of other sets
+    NO_ANNEAL,      // Is not annealed during the process
+    UNDEFINED,      // Not defined because no link info given
+    EMPTY           // Spin value array memory is not allocated yet
 };
 
+/**
+ * Represents a set of spins.
+ * @tparam T Spin value type
+ */
 template<typename T>
 class Set {
 protected:
@@ -24,17 +28,45 @@ protected:
 public:
     SetType set_type;
 
+    /**
+     * Default Set constructor.
+     */
     Set() : set_size(0), set_values(nullptr), set_type(EMPTY) {}
 
+    /**
+     * Empty Set constructor.
+     * @param size Spin quantity
+     */
     explicit Set(int size) : set_size(size), set_values(new T[size]), set_type(UNDEFINED) {}
 
+    /**
+     * Set constructor.
+     * @param size Spin quantity
+     * @param set_values Spin value array pointer
+     * @param set_type Type of set (see SetType docs)
+     */
     Set(int size, T *set_values, SetType set_type);
 
+    /**
+     * Get spin from specified index.
+     * @param index Spin index
+     * @return Spin reference
+     */
     T &operator[](int index);
 
+    /**
+     * Get spin from specified index.
+     * @param index Spin index
+     * @return Spin value
+     */
     virtual T operator()(int index);
 
-    T hamiltonian(Lattice<T> matrix);
+    /**
+     * Calculate hamiltonian of spin system.
+     * @param lattice Lattice describing spin interactions
+     * @return Hamiltonian value
+     */
+    T hamiltonian(Lattice<T> lattice);
 };
 
 template<typename T>
@@ -50,14 +82,14 @@ T &Set<T>::operator[](int index) {
 }
 
 template<typename T>
-T Set<T>::hamiltonian(Lattice<T> matrix) {
+T Set<T>::hamiltonian(Lattice<T> lattice) {
     T ham = 0;
     for (int i = 0; i < set_size; ++i)
         for (int j = 0; j < set_size; ++j)
             if (i == j)
-                ham += matrix(i, j) * set_values[i];
+                ham += lattice(i, j) * set_values[i];
             else
-                ham += matrix(i, j) * set_values[i] * set_values[j];
+                ham += lattice(i, j) * set_values[i] * set_values[j];
     return ham;
 }
 

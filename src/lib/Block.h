@@ -12,8 +12,17 @@
 #include "BigFloat.h"
 #include "Set.h"
 
+/**
+ * Represents a union of several spin sets that interact with each other.
+ * Set interaction is described by the links field.
+ * @tparam T Spin value type
+ */
 template<typename T>
 struct Block {
+    /**
+     * A set_link object contains indices of sets that interact with the given one.
+     * The links object contains a set_link for every set in block.
+     */
     typedef std::vector<int> set_link;
 
     int set_size = 0;
@@ -21,13 +30,36 @@ struct Block {
     T *block_values = nullptr;
     set_link *links = nullptr;
 
+    /**
+     * Default Block constructor
+     */
     Block() = default;
 
+    /**
+     * Block constructor.
+     * @param set_size Quantity of spins in sets
+     * @param set_count Quantity of sets in block
+     * @param block_values Spin values array pointer
+     * @param links Link array pointer
+     */
     Block(int set_size, int set_count, T *block_values, set_link *links) :
             set_size(set_size), set_count(set_count), block_values(block_values), links(links) {};
 
-    BigFloat meanField(Lattice<T> matrix, int set_index, int spin_index, BigFloat interaction_multiplier);
+    /**
+     * Calculates mean field value for specified spin in specified set
+     * @param lattice Lattice describing spin interactions
+     * @param set_index Index of set in block
+     * @param spin_index Index of spin in set
+     * @param interaction_multiplier Number describing set interaction
+     * @return Mean field value
+     */
+    BigFloat meanField(Lattice<T> lattice, int set_index, int spin_index, BigFloat interaction_multiplier);
 
+    /**
+     * Get Set from specified index.
+     * @param index Index of set in block
+     * @return Set object
+     */
     Set<T> operator[](int index);
 };
 
