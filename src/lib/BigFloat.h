@@ -87,8 +87,15 @@ public:
     explicit operator float() {
         this->setupPrecision();
         if (exponent >= 38)  // Prevent overflow
-            return FLT_MAX * (mantissa > 0 ? 1. : -1.);
+            return FLT_MAX * (float) (mantissa > 0 ? 1 : -1);
         return mantissa * exp10f((float) exponent);
+    }
+
+    explicit operator double() {
+        this->setupPrecision();
+        if (exponent >= 308)  // Prevent overflow
+            return DBL_MAX * (double) (mantissa > 0 ? 1 : -1);
+        return mantissa * exp10((double) exponent);
     }
 
     BigFloat &operator=(float _float) {
@@ -97,6 +104,8 @@ public:
     }
 
     bool operator==(float _float) { return this->equals(BigFloat(_float)); }
+
+    bool operator!=(float _float) { return not(*this == _float); }
 
     BigFloat operator*(BigFloat _bigFloat) { return this->getInstance().multiplyBy(_bigFloat); }
 

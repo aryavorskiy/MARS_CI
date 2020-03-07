@@ -7,6 +7,7 @@
 
 #include <string>
 #include <fstream>
+#include "Random.h"
 
 
 template<typename T>
@@ -35,7 +36,7 @@ Lattice<T>::Lattice(const std::string &_filename) {
     mat_values = new T[mat_size * mat_size];
     for (int i = 0; i < mat_size; ++i) {
         for (int j = 0; j < mat_size; ++j) {
-            float tmp;
+            float tmp = 0;
             ifs >> tmp;
             if (i <= j) {
                 mat_values[i * mat_size + j] = tmp;
@@ -52,7 +53,7 @@ Lattice<T>::Lattice(int _size, bool randomize) {
     for (int i = 0; i < mat_size; ++i) {
         for (int j = 0; j < mat_size; ++j) {
             if (randomize and i > j) {
-                mat_values[i * mat_size + j] = mat_values[j * mat_size + i] = 2 * (float) rand() / (float) RAND_MAX - 1;
+                mat_values[i * mat_size + j] = mat_values[j * mat_size + i] = Random::uniform();
             } else if (not randomize or i == j) {
                 mat_values[i * mat_size + j] = 0;
             }

@@ -19,10 +19,11 @@ template<typename T>
 class BlockTemplate {
 private:
     typedef std::vector<int> set_link;
-    Set<T> *sets;
-    set_link *links;
+
     int set_size;
     int set_count;
+    Set<T> *sets;
+    set_link *links;
 
     void loadLinks(const std::string &link_filename);
 
@@ -42,18 +43,20 @@ template<typename T>
 struct RandomSet : Set<T> {
     RandomSet() = default;
 
-    RandomSet(int size) {
+    explicit RandomSet(int size) {
         this->set_size = size;
         this->set_values = new T[size];
-        for (int spin_index = 0; spin_index < size; ++spin_index)
-            this->set_values[spin_index] = 2 * (float) rand() / (float) RAND_MAX - 1;
+    }
+
+    T operator()(int) {
+        return Random::uniform();
     }
 };
 
 template<typename T>
 void BlockTemplate<T>::loadLinks(const std::string &link_filename) {
+    links = new set_link[set_count];
     if (link_filename == "NONE") {
-        links = new set_link[set_count];
         for (int link_index = 0; link_index < set_count; ++link_index)
             links[link_index] = set_link();
         return;
@@ -62,8 +65,7 @@ void BlockTemplate<T>::loadLinks(const std::string &link_filename) {
     int block_size = 0;
     ifs >> block_size;
     assert(block_size == set_count);
-    std::string line = "";
-    links = new set_link[set_count];
+    std::string line;
     getline(ifs, line);
     for (int link_index = 0; link_index < block_size; ++link_index) {
         // Read the link file
@@ -114,7 +116,7 @@ BlockTemplate<T>::BlockTemplate(int _set_size, const std::string &block_filename
             set_index--;
         } else if (line == "RAND") {
             // Random line
-            sets[set_index] = RandomSet<T>();
+            sets[set_index] = RandomSet<T>(set_size);
         } else {
             // Read line from line buffer
             auto line_parser = std::istringstream(line);
@@ -145,7 +147,7 @@ Block<T> BlockTemplate<T>::instance() {
     T *block_data = new T[set_count * set_size];
     for (int set_index = 0; set_index < set_count; ++set_index) {
         for (int spin_index = 0; spin_index < set_size; ++spin_index) {
-            block_data[set_index * set_size + spin_index] = sets[set_index][spin_index];
+            block_data[set_index * set_size + spin_index] = sets[set_index](spin_index);
         }
     }
     return Block<T>(set_size, set_count, block_data, links);

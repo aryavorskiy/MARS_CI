@@ -24,13 +24,15 @@ protected:
 public:
     SetType set_type;
 
-    Set() : set_type(EMPTY), set_size(0), set_values(nullptr) {}
+    Set() : set_size(0), set_values(nullptr), set_type(EMPTY) {}
 
-    Set(int size) : set_type(UNDEFINED), set_size(size), set_values(new T[size]) {}
+    explicit Set(int size) : set_size(size), set_values(new T[size]), set_type(UNDEFINED) {}
 
     Set(int size, T *set_values, SetType set_type);
 
-    virtual T &operator[](int index);
+    T &operator[](int index);
+
+    virtual T operator()(int index);
 
     T hamiltonian(Lattice<T> matrix);
 };
@@ -57,6 +59,11 @@ T Set<T>::hamiltonian(Lattice<T> matrix) {
             else
                 ham += matrix(i, j) * set_values[i] * set_values[j];
     return ham;
+}
+
+template<typename T>
+T Set<T>::operator()(int index) {
+    return set_values[index];
 }
 
 #endif //MARS_CI_SET_H

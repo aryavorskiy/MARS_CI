@@ -12,13 +12,14 @@
 
 template<typename T>
 struct AnnealingRun {
-    float temperature, temperature_step;
+    float temperature, temperature_step, temperature_threshold;
     BigFloat interaction_multiplier;
-    const Lattice<T> &matrix;
+    const Lattice<T> &lattice;
     Block<T> block;
     int step_counter;
 
-    AnnealingRun(Lattice<T> lattice);;
+
+    explicit AnnealingRun(Lattice<T> &lattice);;
 
     Set<T> operator[](int index);
 
@@ -41,18 +42,20 @@ void AnnealingRun<T>::annealingStep() {
         proceed_iteration = false;
         for (int set_index = 0; set_index < block.set_count; ++set_index) {
             for (int spin_index = 0; spin_index < block.set_size; ++spin_index) {
-                T mean_field = block.meanField(matrix, set_index, spin_index, interaction_multiplier);
+                BigFloat mean_field;
+                if (temperature > temperature_threshold)
+                    mean_field = block.meanField(lattice, set_index, spin_index, interaction_multiplier);
+                else
+                    mean_field = block.meanField(lattice, set_index, spin_index, BigFloat(0));
                 T new_spin_value;
                 if (temperature > 0)
-                    new_spin_value = tanh(-mean_field / temperature);
+                    new_spin_value = tanh((T) (mean_field / -temperature));
                 else
                     new_spin_value = mean_field > 0 ? -1 : 1;
                 T old_spin_value = block[set_index][spin_index];
                 if (fabs(new_spin_value - old_spin_value) > threshold)
                     proceed_iteration = true;
                 block[set_index][spin_index] = new_spin_value;
-                delete[] &new_spin_value;
-                delete[] &mean_field;
             }
         }
     }
@@ -68,7 +71,8 @@ void AnnealingRun<T>::anneal() {
 }
 
 template<typename T>
-AnnealingRun<T>::AnnealingRun(Lattice<T> lattice) : matrix(lattice), step_counter(0) {}
+AnnealingRun<T>::AnnealingRun(Lattice<T> &lattice) : temperature(10), temperature_step(1), temperature_threshold(0),
+                                                     lattice(lattice), step_counter(0) {}
 
 
 #endif //MARS_CI_ANNEALINGRUN_H

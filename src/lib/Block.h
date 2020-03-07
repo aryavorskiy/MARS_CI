@@ -15,10 +15,11 @@
 template<typename T>
 struct Block {
     typedef std::vector<int> set_link;
-    T *block_values;
-    set_link *links;
-    int set_size;
-    int set_count;
+
+    int set_size = 0;
+    int set_count = 0;
+    T *block_values = nullptr;
+    set_link *links = nullptr;
 
     Block() = default;
 
@@ -36,11 +37,13 @@ BigFloat Block<T>::meanField(Lattice<T> matrix, int set_index, int spin_index, B
     BigFloat mean_field{};
 
     // Set interaction in block
-    for (int link_element : links[set_index]) {
-        mean_field += interaction_multiplier * (float) (0.5 * logf(
-                (1 + block_values[link_element * set_size + spin_index]) /
-                (1 - block_values[link_element * set_size + spin_index])
-        ));
+    if (interaction_multiplier != 0) {
+        for (int link_element : links[set_index]) {
+            mean_field += interaction_multiplier * (float) (0.5 * logf(
+                    (1 + block_values[link_element * set_size + spin_index]) /
+                    (1 - block_values[link_element * set_size + spin_index])
+            ));
+        }
     }
 
     // Spin interaction in set
