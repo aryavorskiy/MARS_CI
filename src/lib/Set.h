@@ -5,7 +5,6 @@
 #ifndef MARS_CI_SET_H
 #define MARS_CI_SET_H
 
-#include <iosfwd>
 #include "Lattice.h"
 
 enum SetType {
@@ -34,12 +33,6 @@ public:
     Set() : set_size(0), set_values(nullptr), set_type(EMPTY) {}
 
     /**
-     * Empty Set constructor.
-     * @param size Spin quantity
-     */
-    explicit Set(int size) : set_size(size), set_values(new T[size]), set_type(UNDEFINED) {}
-
-    /**
      * Set constructor.
      * @param size Spin quantity
      * @param set_values Spin value array pointer
@@ -48,18 +41,11 @@ public:
     Set(int size, T *set_values, SetType set_type);
 
     /**
-     * Get spin from specified index.
-     * @param index Spin index
-     * @return Spin reference
-     */
+    * Get spin from specified index.
+    * @param index Spin index
+    * @return Spin value reference
+    */
     T &operator[](int index);
-
-    /**
-     * Get spin from specified index.
-     * @param index Spin index
-     * @return Spin value
-     */
-    virtual T operator()(int index);
 
     /**
      * Calculate hamiltonian of spin system.
@@ -67,6 +53,12 @@ public:
      * @return Hamiltonian value
      */
     T hamiltonian(Lattice<T> lattice);
+
+    /**
+     * Get spin count in set.
+     * @return Spin count
+     */
+    int size();
 };
 
 template<typename T>
@@ -94,8 +86,6 @@ T Set<T>::hamiltonian(Lattice<T> lattice) {
 }
 
 template<typename T>
-T Set<T>::operator()(int index) {
-    return set_values[index];
-}
+int Set<T>::size() { return set_size; }
 
 #endif //MARS_CI_SET_H

@@ -9,7 +9,7 @@ set(CMAKE_CXX_FLAGS_DEBUG "-g")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 set(CMAKE_CXX_STANDARD 14)
-add_executable(MARS_CI src/main.cpp src/BlockTemplate.h src/lib/Random.h)
+add_executable(MARS_CI src/main.cpp src/BlockTemplate.h src/lib/Random.h src/SetTemplate.h)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 target_link_libraries(MARS_CI Threads::Threads)

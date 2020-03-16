@@ -5,7 +5,6 @@
 #ifndef MARS_CI_ANNEALINGRUN_H
 #define MARS_CI_ANNEALINGRUN_H
 
-
 #include "lib/Lattice.h"
 #include "lib/Block.h"
 #include "lib/Set.h"
@@ -60,7 +59,7 @@ void AnnealingRun<T>::annealingStep() {
     while (proceed_iteration) {
         proceed_iteration = false;
         for (int set_index = 0; set_index < block.set_count; ++set_index) {
-            for (int spin_index = 0; spin_index < block.set_size; ++spin_index) {
+            for (int spin_index = 0; spin_index < block.set_size(); ++spin_index) {
                 BigFloat mean_field;
                 if (temperature > temperature_threshold)
                     mean_field = block.meanField(lattice, set_index, spin_index, interaction_multiplier);
@@ -74,7 +73,7 @@ void AnnealingRun<T>::annealingStep() {
                 T old_spin_value = block[set_index][spin_index];
                 if (fabs(new_spin_value - old_spin_value) > threshold)
                     proceed_iteration = true;
-                block[set_index][spin_index] = new_spin_value;
+                block.SetSpin(set_index, spin_index, new_spin_value);
             }
         }
     }

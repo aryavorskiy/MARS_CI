@@ -12,7 +12,7 @@
 #include <sstream>
 
 #include "lib/Block.h"
-#include "BlockTemplate.h"
+#include "SetTemplate.h"
 #include "lib/Set.h"
 
 /**
@@ -23,12 +23,13 @@
 template<typename T>
 class BlockTemplate {
 private:
-    typedef std::vector<int> set_link;
+    typedef std::vector<int> SetLink;
+    typedef std::unique_ptr<SetTemplate<T>> SetReference;
 
     int set_size;
     int set_count;
-    Set<T> *sets;
-    set_link *links;
+    std::vector<SetReference> sets;
+    SetLink *links;
 
     /**
      * Load link information from specified file.
@@ -40,7 +41,7 @@ public:
     /**
      * Default BlockTemplate constructor.
      */
-    BlockTemplate() : set_size(0), set_count(0), sets(nullptr), links(nullptr) {};
+    BlockTemplate() : set_size(0), set_count(0), sets(std::vector<SetReference>()), links(nullptr) {};
 
     /**
      * BlockTemplate constructor that creates an empty block.
@@ -59,37 +60,18 @@ public:
     BlockTemplate(int set_size, const std::string &block_filename, const std::string &link_filename);
 
     /**
-     * Create a Block object that matches the template.
+     * Create a Block object that matches the template represented by this.
      * @return Block object
      */
     Block<T> instance();
-
-    /**
-     * @return Quantity of Sets in block
-     */
-    int size();
-};
-
-template<typename T>
-struct RandomSet : Set<T> {
-    RandomSet() = default;
-
-    explicit RandomSet(int size) {
-        this->set_size = size;
-        this->set_values = new T[size];
-    }
-
-    T operator()(int) {
-        return Random::uniform(-1, 1);
-    }
 };
 
 template<typename T>
 void BlockTemplate<T>::loadLinks(const std::string &link_filename) {
-    links = new set_link[set_count];
+    links = new SetLink[set_count];
     if (link_filename == "NONE") {
         for (int link_index = 0; link_index < set_count; ++link_index)
-            links[link_index] = set_link();
+            links[link_index] = SetLink();
         return;
     }
     auto ifs = std::ifstream(link_filename);
@@ -100,7 +82,7 @@ void BlockTemplate<T>::loadLinks(const std::string &link_filename) {
     getline(ifs, line);
     for (int link_index = 0; link_index < block_size; ++link_index) {
         // Read the link file
-        set_link link = set_link();
+        SetLink link = SetLink();
         getline(ifs, line);
         if (line.empty()) {
             // Ignore empty line
@@ -135,7 +117,7 @@ BlockTemplate<T>::BlockTemplate(int _set_size, const std::string &block_filename
         set_size(_set_size) {
     auto ifs = std::ifstream(block_filename);
     ifs >> set_count;
-    sets = new Set<T>[set_count]{Set<T>(set_size)};
+    sets = std::vector<SetReference>();
 
     std::string line;
     getline(ifs, line);
@@ -147,15 +129,10 @@ BlockTemplate<T>::BlockTemplate(int _set_size, const std::string &block_filename
             set_index--;
         } else if (line == "RAND") {
             // Random line
-            sets[set_index] = RandomSet<T>(set_size);
+            sets.emplace_back(new RandomSetTemplate<T>(set_size));
         } else {
             // Read line from line buffer
-            auto line_parser = std::istringstream(line);
-            for (int i = 0; i < set_size; ++i) {
-                T buf;
-                line_parser >> buf;
-                sets[set_index][i] = buf;
-            }
+            sets.emplace_back(new GivenSetTemplate<T>(set_size, line));
         }
     }
     // Initialize links
@@ -165,9 +142,9 @@ BlockTemplate<T>::BlockTemplate(int _set_size, const std::string &block_filename
 template<typename T>
 BlockTemplate<T>::BlockTemplate(int set_size, int set_count, const std::string &link_filename) :
         set_size(set_size), set_count(set_count) {
-    sets = new RandomSet<T>[set_count];
+    sets = std::vector<SetReference>();
     for (int set_index = 0; set_index < set_count; ++set_index)
-        sets[set_index] = RandomSet<T>(set_size);
+        sets.emplace_back(new RandomSetTemplate<T>(set_size));
 
     // Initialize links
     loadLinks(link_filename);
@@ -175,19 +152,10 @@ BlockTemplate<T>::BlockTemplate(int set_size, int set_count, const std::string &
 
 template<typename T>
 Block<T> BlockTemplate<T>::instance() {
-    T *block_data = new T[set_count * set_size];
-    for (int set_index = 0; set_index < set_count; ++set_index) {
-        for (int spin_index = 0; spin_index < set_size; ++spin_index) {
-            block_data[set_index * set_size + spin_index] = sets[set_index](spin_index);
-        }
-    }
-    return Block<T>(set_size, set_count, block_data, links);
+    Set<T> *sets_out = new Set<T>[set_count];
+    for (int set_index = 0; set_index < set_count; ++set_index)
+        sets_out[set_index] = sets[set_index]->instance();
+    return Block<T>(set_count, sets_out, links);
 }
-
-template<typename T>
-int BlockTemplate<T>::size() {
-    return set_count;
-}
-
 
 #endif //MARS_CI_BLOCKTEMPLATE_H

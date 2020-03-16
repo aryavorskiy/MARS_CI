@@ -10,7 +10,7 @@
 #include "AnnealingRun.h"
 
 #define VERSION "3.3"
-#define BUILD 11
+#define BUILD 23
 
 /*
  * TERMINOLOGY:
@@ -40,7 +40,7 @@ std::ostream &operator<<(std::ostream &out, AnnealingRun<T> run) {
                 break;
         }
         out << "Hamiltonian: " << run.block[set_index].hamiltonian(run.lattice) << "; Data:" << std::endl;
-        for (int spin_index = 0; spin_index < run.block.set_size; ++spin_index)
+        for (int spin_index = 0; spin_index < run.block.set_size(); ++spin_index)
             out << run.block[set_index][spin_index] << " ";
         out << std::endl;
     }
@@ -215,6 +215,6 @@ int main() {
     while (any_threads_running) {
         any_threads_running = false;
         for (int i = 0; i < threads; i++)
-            any_threads_running = (any_threads_running || !thread_flags[i]);
+            any_threads_running = any_threads_running || !thread_flags[i];
     }
 }
