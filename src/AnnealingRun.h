@@ -16,17 +16,17 @@
  */
 template<typename T>
 struct AnnealingRun {
-    float temperature, temperature_step, temperature_threshold;
-    BigFloat interaction_multiplier;
+    float temperature = 10, temperature_step = 1, temperature_threshold = 1;
+    BigFloat interaction_multiplier = 0;
     const Lattice<T> &lattice;
     Block<T> block;
-    int step_counter;
+    int step_counter = 0;
 
     /**
      * Minimal AnnealingRun constructor.
      * @param lattice Lattice object
      */
-    explicit AnnealingRun(Lattice<T> &lattice);;
+    explicit AnnealingRun(Lattice<T> &lattice) : lattice(lattice) {}
 
     /**
      * Get a Set from the Block object.
@@ -59,7 +59,7 @@ void AnnealingRun<T>::annealingStep() {
     while (proceed_iteration) {
         proceed_iteration = false;
         for (int set_index = 0; set_index < block.set_count; ++set_index) {
-            for (int spin_index = 0; spin_index < block.set_size(); ++spin_index) {
+            for (int spin_index = 0; spin_index < block.setSize(); ++spin_index) {
                 BigFloat mean_field;
                 if (temperature > temperature_threshold)
                     mean_field = block.meanField(lattice, set_index, spin_index, interaction_multiplier);
@@ -73,7 +73,7 @@ void AnnealingRun<T>::annealingStep() {
                 T old_spin_value = block[set_index][spin_index];
                 if (fabs(new_spin_value - old_spin_value) > threshold)
                     proceed_iteration = true;
-                block.SetSpin(set_index, spin_index, new_spin_value);
+                block.setSpin(set_index, spin_index, new_spin_value);
             }
         }
     }
@@ -87,10 +87,6 @@ void AnnealingRun<T>::anneal() {
         annealingStep();
     }
 }
-
-template<typename T>
-AnnealingRun<T>::AnnealingRun(Lattice<T> &lattice) : temperature(10), temperature_step(1), temperature_threshold(0),
-                                                     lattice(lattice), step_counter(0) {}
 
 
 #endif //MARS_CI_ANNEALINGRUN_H

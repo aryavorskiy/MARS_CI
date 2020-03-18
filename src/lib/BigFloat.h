@@ -14,7 +14,7 @@
  */
 class BigFloat {
 private:
-    float mantissa;
+    double mantissa;
     long exponent;
 
     void setupPrecision() {
@@ -77,13 +77,17 @@ private:
 
 
     BigFloat getInstance() {
-        return BigFloat(mantissa, exponent);
+        BigFloat bf;
+        bf.mantissa = mantissa;
+        bf.exponent = exponent;
+        bf.setupPrecision();
+        return bf;
     }
 
 public:
-    explicit BigFloat(float _base = 0, long _exp = 0) {
-        mantissa = _base;
-        exponent = _exp;
+    BigFloat(double _base = 0, double _exp = 0) {
+        mantissa = _base * exp10(_exp - (double) (long) _exp);
+        exponent = (long) _exp;
         setupPrecision();
     }
 
@@ -91,7 +95,7 @@ public:
         this->setupPrecision();
         if (exponent >= 38)  // Prevent overflow
             return FLT_MAX * (float) (mantissa > 0 ? 1 : -1);
-        return mantissa * exp10f((float) exponent);
+        return (float) mantissa * exp10f((float) exponent);
     }
 
     explicit operator double() {

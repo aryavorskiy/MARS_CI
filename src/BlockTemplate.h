@@ -26,10 +26,10 @@ private:
     typedef std::vector<int> SetLink;
     typedef std::unique_ptr<SetTemplate<T>> SetReference;
 
-    int set_size;
-    int set_count;
-    std::vector<SetReference> sets;
-    SetLink *links;
+    int set_size = 0;
+    int set_count = 0;
+    std::vector<SetReference> sets = std::vector<SetReference>();
+    SetLink *links = nullptr;
 
     /**
      * Load link information from specified file.
@@ -41,7 +41,7 @@ public:
     /**
      * Default BlockTemplate constructor.
      */
-    BlockTemplate() : set_size(0), set_count(0), sets(std::vector<SetReference>()), links(nullptr) {};
+    BlockTemplate() = default;
 
     /**
      * BlockTemplate constructor that creates an empty block.
@@ -103,7 +103,7 @@ void BlockTemplate<T>::loadLinks(const std::string &link_filename) {
             for (int j = 0; j < block_size; ++j) {
                 int buf = 0;
                 line_parser >> buf;
-                if (link.empty() || std::find(link.begin(), link.end(), buf) != link.end())
+                if (link.empty() || std::find(link.begin(), link.end(), buf) == link.end())
                     // Duplicates are ignored
                     link.push_back(buf);
             }
@@ -152,7 +152,7 @@ BlockTemplate<T>::BlockTemplate(int set_size, int set_count, const std::string &
 
 template<typename T>
 Block<T> BlockTemplate<T>::instance() {
-    Set<T> *sets_out = new Set<T>[set_count];
+    auto *sets_out = new Set<T>[set_count];
     for (int set_index = 0; set_index < set_count; ++set_index)
         sets_out[set_index] = sets[set_index]->instance();
     return Block<T>(set_count, sets_out, links);

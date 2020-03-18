@@ -1,5 +1,4 @@
 #include <iostream>
-#include <cmath>
 #include <thread>
 #include <mutex>
 #include <vector>
@@ -9,15 +8,15 @@
 #include "BlockTemplate.h"
 #include "AnnealingRun.h"
 
-#define VERSION "3.3"
-#define BUILD 23
+#define VERSION "3.4"
+#define BUILD 5
+#define NO_INPUT // Uncomment to disable parameter input
 
 /*
  * TERMINOLOGY:
  * Lattice - describes J_ij lattice
  * Set - describes system mean spin values at certain state
  * Block - several sets which descend simultaneously and interact with each other
- * Link - A std::std::vector describing set interaction in a block
  */
 
 std::mutex stdout_mutex, file_mutex;
@@ -40,7 +39,7 @@ std::ostream &operator<<(std::ostream &out, AnnealingRun<T> run) {
                 break;
         }
         out << "Hamiltonian: " << run.block[set_index].hamiltonian(run.lattice) << "; Data:" << std::endl;
-        for (int spin_index = 0; spin_index < run.block.set_size(); ++spin_index)
+        for (int spin_index = 0; spin_index < run.block.setSize(); ++spin_index)
             out << run.block[set_index][spin_index] << " ";
         out << std::endl;
     }
@@ -48,7 +47,18 @@ std::ostream &operator<<(std::ostream &out, AnnealingRun<T> run) {
 }
 
 template<typename T>
-void anneal_output_silent(AnnealingRun<T> run, volatile bool *flag) {
+std::ostream &operator<<(std::ostream &out, Lattice<T> lattice) {
+    out << lattice.size() << std::endl;
+    for (int i = 0; i < lattice.size(); ++i) {
+        for (int j = 0; j < lattice.size(); ++j)
+            out << lattice(i, j) << " ";
+        out << std::endl;
+    }
+    return out;
+}
+
+template<typename T>
+void anneal_output_silent(AnnealingRun<T> run, volatile bool *semaphore) {
     float start_temp = run.temperature;
     run.anneal();
     stdout_mutex.lock();
@@ -68,11 +78,11 @@ void anneal_output_silent(AnnealingRun<T> run, volatile bool *flag) {
     }
     std::cout << std::endl;
     stdout_mutex.unlock();
-    *flag = true;
+    *semaphore = true;
 }
 
 template<typename T>
-void anneal_output(AnnealingRun<T> run, volatile bool *flag, const std::string &results_filename) {
+void anneal_output(AnnealingRun<T> run, volatile bool *semaphore, const std::string &results_filename) {
     std::ofstream file_stream = std::ofstream(results_filename, std::ios::out | std::ios::app);
     float start_temp = run.temperature;
 
@@ -81,16 +91,16 @@ void anneal_output(AnnealingRun<T> run, volatile bool *flag, const std::string &
     file_stream << run << std::endl;
     file_mutex.unlock();
 
-    bool dummy_flag = true;
-    anneal_output_silent(run, &dummy_flag);
+    bool dummy_semaphore = true;
+    anneal_output_silent(run, &dummy_semaphore);
 
     file_mutex.lock();
     file_stream << "Finished processing block; Start temperature was " << start_temp << "; Took " << run.step_counter
-                << " steps; Block data:" << std::endl;
-    file_stream << run << std::endl;
+                << " steps; Block data:" << std::endl << run << std::endl;
+    file_stream.close();
     file_mutex.unlock();
 
-    *flag = true;
+    *semaphore = true;
 }
 
 int main() {
@@ -111,9 +121,9 @@ int main() {
 
     // Load lattice
     Lattice<value_type> lattice;
-    std::string lattice_initializer = "/home/alexander/CLionProjects/MARS_2/mat1000.txt";
+    std::string lattice_initializer = "100";
 #ifndef NO_INPUT
-    std::cout << "Lattice file path (or size if random matrix needed)?" << std::endl;
+    std::cout << "Lattice file path (or size if random lattice needed)?" << std::endl;
     std::cin >> lattice_initializer;
 #endif
 
@@ -167,9 +177,9 @@ int main() {
     std::cin >> mul_log;
 #endif
 
-    BigFloat interaction_multiplier = BigFloat(exp10f(mul_log - (int) mul_log), (int) mul_log);
+    BigFloat interaction_multiplier = BigFloat(1, mul_log);
 
-    float temp_interaction_threshold = 1;
+    float temp_interaction_threshold = 2;
 #ifndef NO_INPUT
     std::cout << "Temperature threshold?" << std::endl;
     std::cin >> temp_interaction_threshold;
@@ -182,16 +192,22 @@ int main() {
     std::cin >> results_filename;
 #endif
 
+    if (results_filename != "NONE") {
+        auto file_stream = std::ofstream(results_filename, std::ios::out);
+        file_stream << "Now set will be annealed with following lattice:\n" << lattice << std::endl;
+        file_stream.close();
+    }
+
     // Start annealing
-    volatile bool *thread_flags = new bool[threads];
+    volatile bool *thread_semaphores = new bool[threads];
     for (int i = 0; i < threads; ++i)
-        thread_flags[i] = true;
+        thread_semaphores[i] = true;
     int threads_launched = 0;
     while (threads_launched < block_count) {
         for (int thrIndex = 0; thrIndex < threads; thrIndex++) {
-            if (thread_flags[thrIndex] and threads_launched < block_count) {
-                // Free place for thread detected
-                thread_flags[thrIndex] = false;
+            if (thread_semaphores[thrIndex] and threads_launched < block_count) {
+                // Free place for thread detected, set semaphore to occupied
+                thread_semaphores[thrIndex] = false;
                 AnnealingRun<value_type> run = AnnealingRun<value_type>(lattice_reference);
                 run.block = block_template.instance();
                 run.temperature =
@@ -202,10 +218,10 @@ int main() {
 
                 // Launch new run on a separate thread
                 if (results_filename == "NONE")
-                    std::thread(anneal_output_silent<value_type>, run, thread_flags + thrIndex).detach();
-                else {
-                    std::thread(anneal_output<value_type>, run, thread_flags + thrIndex, results_filename).detach();
-                }
+                    std::thread(anneal_output_silent<value_type>, run, thread_semaphores + thrIndex).detach();
+                else
+                    std::thread(anneal_output<value_type>, run, thread_semaphores + thrIndex,
+                                results_filename).detach();
                 threads_launched++;
             }
         }
@@ -215,6 +231,6 @@ int main() {
     while (any_threads_running) {
         any_threads_running = false;
         for (int i = 0; i < threads; i++)
-            any_threads_running = any_threads_running || !thread_flags[i];
+            any_threads_running = any_threads_running || !thread_semaphores[i];
     }
 }

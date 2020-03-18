@@ -17,26 +17,26 @@
 template<typename T>
 class Lattice {
 private:
-    int mat_size;
-    T *mat_values;
+    int mat_size = 0;
+    T *mat_values = nullptr;
 public:
     /**
      * Default Lattice constructor.
      */
-    Lattice() : mat_size(0), mat_values(nullptr) {};
+    Lattice() = default;
 
     /**
      * Empty or random Lattice constructor.
-     * @param _size Lattice size
+     * @param size Lattice size
      * @param randomize False to set all lattice elements to zero, True to randomize them
      */
-    explicit Lattice(int _size, bool randomize = false);
+    explicit Lattice(int size, bool randomize = false);
 
     /**
      * Lattice constructor that loads element values from specified filename.
-     * @param _filename Filename where Lattice values are stored
+     * @param filename Filename where Lattice values are stored
      */
-    explicit Lattice(const std::string &_filename);
+    explicit Lattice(const std::string &filename);
 
     /**
      * Get element value by indices.
@@ -54,8 +54,8 @@ public:
 };
 
 template<typename T>
-Lattice<T>::Lattice(const std::string &_filename) {
-    auto ifs = std::ifstream(_filename);
+Lattice<T>::Lattice(const std::string &filename) {
+    auto ifs = std::ifstream(filename);
     int k = 0;
     ifs >> k;
     mat_size = k;
@@ -73,8 +73,8 @@ Lattice<T>::Lattice(const std::string &_filename) {
 }
 
 template<typename T>
-Lattice<T>::Lattice(int _size, bool randomize) {
-    mat_size = _size;
+Lattice<T>::Lattice(int size, bool randomize) {
+    mat_size = size;
     mat_values = new T[mat_size * mat_size];
     for (int i = 0; i < mat_size; ++i) {
         for (int j = 0; j < mat_size; ++j) {

@@ -69,13 +69,13 @@ public:
      * @param spin_index Index of spin in set
      * @param spin_value Value to write
      */
-    void SetSpin(int set_index, int spin_index, T spin_value);
+    void setSpin(int set_index, int spin_index, T spin_value);
 
     /**
      * Get spin count in sets in block.
      * @return Spin count
      */
-    int set_size();
+    int setSize();
 };
 
 template<typename T>
@@ -90,31 +90,17 @@ Block<T>::Block(int set_count, Set<T> *sets, Block::SetLink *links) :
         else
             set_type = DEPENDENT;
         sets[set_index].set_type = set_type;
+        for (int link_index : links[set_index]) {
+            sets[set_index].createLink(sets[link_index]);
+        }
     }
 }
 
 
 template<typename T>
-BigFloat Block<T>::meanField(Lattice<T> matrix, int set_index, int spin_index, BigFloat interaction_multiplier) {
-    assert(matrix.size() == this->set_size());
-    BigFloat mean_field{};
-
-    // Set interaction in block
-    if (interaction_multiplier != 0) {
-        for (int link_element : links[set_index]) {
-            mean_field += interaction_multiplier * (float) (0.5 * logf(
-                    (1 + sets[link_element][spin_index]) /
-                    (1 - sets[link_element][spin_index])
-            ));
-        }
-    }
-
-    // Spin interaction in set
-    for (int i = 0; i < sets[set_index].size(); ++i) {
-        if (i != spin_index)
-            mean_field += sets[set_index][i] * matrix(i, spin_index);
-    }
-    return mean_field;
+BigFloat Block<T>::meanField(Lattice<T> lattice, int set_index, int spin_index, BigFloat interaction_multiplier) {
+    assert(lattice.size() == this->setSize());
+    return sets[set_index].meanField(spin_index, lattice, interaction_multiplier);
 }
 
 template<typename T>
@@ -123,12 +109,12 @@ Set<T> Block<T>::operator[](int index) {
 }
 
 template<typename T>
-void Block<T>::SetSpin(int set_index, int spin_index, T spin_value) {
-    sets[set_index][spin_index] = spin_value;
+void Block<T>::setSpin(int set_index, int spin_index, T spin_value) {
+    sets[set_index].setSpin(spin_index, spin_value);
 }
 
 template<typename T>
-int Block<T>::set_size() {
+int Block<T>::setSize() {
     return sets[0].size();
 }
 
