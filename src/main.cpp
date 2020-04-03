@@ -2,6 +2,7 @@
 #include <thread>
 #include <mutex>
 #include <vector>
+#include <semaphore.h>
 
 #include "lib/BigFloat.h"
 #include "lib/Lattice.h"
@@ -20,6 +21,8 @@
  */
 
 std::mutex stdout_mutex, file_mutex;
+
+sem_t semaphore;
 
 template<typename T>
 std::ostream &operator<<(std::ostream &out, AnnealingRun<T> run) {
@@ -58,9 +61,11 @@ std::ostream &operator<<(std::ostream &out, Lattice<T> lattice) {
 }
 
 template<typename T>
-void anneal_output_silent(AnnealingRun<T> run, volatile bool *semaphore) {
+void anneal_output_silent(AnnealingRun<T> run) {
     float start_temp = run.temperature;
+    sem_wait(&semaphore);
     run.anneal();
+    sem_post(&semaphore);
     stdout_mutex.lock();
     std::cout << start_temp;
     for (int set_index = 0; set_index < run.block.set_count; ++set_index) {
@@ -78,11 +83,10 @@ void anneal_output_silent(AnnealingRun<T> run, volatile bool *semaphore) {
     }
     std::cout << std::endl;
     stdout_mutex.unlock();
-    *semaphore = true;
 }
 
 template<typename T>
-void anneal_output(AnnealingRun<T> run, volatile bool *semaphore, const std::string &results_filename) {
+void anneal_output(AnnealingRun<T> run, const std::string &results_filename) {
     std::ofstream file_stream = std::ofstream(results_filename, std::ios::out | std::ios::app);
     float start_temp = run.temperature;
 
@@ -91,19 +95,19 @@ void anneal_output(AnnealingRun<T> run, volatile bool *semaphore, const std::str
     file_stream << run << std::endl;
     file_mutex.unlock();
 
-    bool dummy_semaphore = true;
-    anneal_output_silent(run, &dummy_semaphore);
+    anneal_output_silent(run);
 
     file_mutex.lock();
     file_stream << "Finished processing block; Start temperature was " << start_temp << "; Took " << run.step_counter
                 << " steps; Block data:" << std::endl << run << std::endl;
     file_stream.close();
     file_mutex.unlock();
-
-    *semaphore = true;
 }
 
 int main() {
+    std::mutex mutex;
+    mutex.unlock();
+    mutex.lock();
     typedef float value_type;
     Random::init(0);
     std::cout << "MARS analysis by A. Yavorski, CPU edition, version " << VERSION << ", build " << BUILD << std::endl;
@@ -121,7 +125,7 @@ int main() {
 
     // Load lattice
     Lattice<value_type> lattice;
-    std::string lattice_initializer = "100";
+    std::string lattice_initializer = "1000";
 #ifndef NO_INPUT
     std::cout << "Lattice file path (or size if random lattice needed)?" << std::endl;
     std::cin >> lattice_initializer;
@@ -138,7 +142,7 @@ int main() {
     Lattice<value_type> &lattice_reference = lattice;
 
     // Load thread quantity
-    int threads = 6;
+    int threads = 1;
 #ifndef NO_INPUT
     std::cout << "Thread quantity?" << std::endl;
     std::cin >> threads;
@@ -155,7 +159,7 @@ int main() {
 #endif
 
     // Load link configuration
-    std::string links_filename = "NONE";
+    std::string links_filename = "/home/alexander/CLionProjects/MARS_2/link";
 #ifndef NO_INPUT
     std::cout << "Links file location (NONE for no interaction)?" << std::endl;
     std::cin >> links_filename;
@@ -171,7 +175,7 @@ int main() {
     }
 
     // Interaction multiplier
-    float mul_log = 0;
+    double mul_log = -2;
 #ifndef NO_INPUT
     std::cout << "Interaction multiplier (decimal log)?" << std::endl;
     std::cin >> mul_log;
@@ -179,7 +183,7 @@ int main() {
 
     BigFloat interaction_multiplier = BigFloat(1, mul_log);
 
-    float temp_interaction_threshold = 2;
+    float temp_interaction_threshold = 3;
 #ifndef NO_INPUT
     std::cout << "Temperature threshold?" << std::endl;
     std::cin >> temp_interaction_threshold;
@@ -199,38 +203,28 @@ int main() {
     }
 
     // Start annealing
-    volatile bool *thread_semaphores = new bool[threads];
-    for (int i = 0; i < threads; ++i)
-        thread_semaphores[i] = true;
-    int threads_launched = 0;
-    while (threads_launched < block_count) {
-        for (int thrIndex = 0; thrIndex < threads; thrIndex++) {
-            if (thread_semaphores[thrIndex] and threads_launched < block_count) {
-                // Free place for thread detected, set semaphore to occupied
-                thread_semaphores[thrIndex] = false;
-                AnnealingRun<value_type> run = AnnealingRun<value_type>(lattice_reference);
-                run.block = block_template.instance();
-                run.temperature =
-                        temp_start + ((float) threads_launched / (float) block_count) * (temp_final - temp_start);
-                run.temperature_step = annealing_step;
-                run.temperature_threshold = temp_interaction_threshold;
-                run.interaction_multiplier = interaction_multiplier;
+    auto *threads_arr = new std::thread[block_count];
 
-                // Launch new run on a separate thread
-                if (results_filename == "NONE")
-                    std::thread(anneal_output_silent<value_type>, run, thread_semaphores + thrIndex).detach();
-                else
-                    std::thread(anneal_output<value_type>, run, thread_semaphores + thrIndex,
-                                results_filename).detach();
-                threads_launched++;
-            }
-        }
+    //Init semaphore
+    sem_init(&semaphore, 1, threads);
+
+    // Launch threads
+    for (int run_index = 0; run_index < block_count; ++run_index) {
+        AnnealingRun<value_type> run = AnnealingRun<value_type>(lattice_reference);
+        run.block = block_template.instance();
+        run.temperature =
+                temp_start + ((float) run_index / (float) block_count) * (temp_final - temp_start);
+        run.temperature_step = annealing_step;
+        run.temperature_threshold = temp_interaction_threshold;
+        run.interaction_multiplier = interaction_multiplier;
+
+        if (results_filename == "NONE")
+            threads_arr[run_index] = std::thread(anneal_output_silent<value_type>, run);
+        else
+            threads_arr[run_index] = std::thread(anneal_output<value_type>, run, results_filename);
     }
 
-    bool any_threads_running = true;
-    while (any_threads_running) {
-        any_threads_running = false;
-        for (int i = 0; i < threads; i++)
-            any_threads_running = any_threads_running || !thread_semaphores[i];
-    }
+    // Join all threads
+    for (int run_index = 0; run_index < block_count; ++run_index)
+        threads_arr[run_index].join();
 }

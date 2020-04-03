@@ -19,15 +19,14 @@
  * @tparam T Spin value type
  */
 template<typename T>
-struct Block {
+class Block {
     /**
-     * A set_link object contains indices of sets that interact with the given one.
-     * The links object contains a set_link for every set in block.
+     * A SetLink object contains indices of sets that interact with the given one.
+     * The links object contains a SetLink for every set in block.
      */
     typedef std::vector<int> SetLink;
 private:
     Set<T> *sets = nullptr;
-    SetLink *links = nullptr;
 
 public:
     int set_count = 0;
@@ -47,21 +46,11 @@ public:
     Block(int set_count, Set<T> *sets, SetLink *links);;
 
     /**
-     * Calculates mean field value for specified spin in specified set
-     * @param lattice Lattice describing spin interactions
-     * @param set_index Index of set in block
-     * @param spin_index Index of spin in set
-     * @param interaction_multiplier Number describing set interaction
-     * @return Mean field value
-     */
-    BigFloat meanField(Lattice<T> lattice, int set_index, int spin_index, BigFloat interaction_multiplier);
-
-    /**
      * Get Set from specified index.
      * @param index Index of set in block
      * @return Set object
      */
-    Set<T> operator[](int index);
+    Set<T> &operator[](int index);
 
     /**
      * Set spin value of specified spin and perform additional actions if needed.
@@ -80,7 +69,7 @@ public:
 
 template<typename T>
 Block<T>::Block(int set_count, Set<T> *sets, Block::SetLink *links) :
-        sets(sets), links(links), set_count(set_count) {
+        sets(sets), set_count(set_count) {
     for (int set_index = 0; set_index < this->set_count; ++set_index) {
         SetType set_type;
         if (links[set_index].empty())
@@ -96,15 +85,8 @@ Block<T>::Block(int set_count, Set<T> *sets, Block::SetLink *links) :
     }
 }
 
-
 template<typename T>
-BigFloat Block<T>::meanField(Lattice<T> lattice, int set_index, int spin_index, BigFloat interaction_multiplier) {
-    assert(lattice.size() == this->setSize());
-    return sets[set_index].meanField(spin_index, lattice, interaction_multiplier);
-}
-
-template<typename T>
-Set<T> Block<T>::operator[](int index) {
+Set<T> &Block<T>::operator[](int index) {
     return sets[index];
 }
 

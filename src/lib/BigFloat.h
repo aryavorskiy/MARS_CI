@@ -8,6 +8,7 @@
 #include <cfloat>
 #include <cmath>
 #include <cstdlib>
+#include <sstream>
 
 /**
  * Represents a floating-point variable with upper bound about 1e(2^32).
@@ -60,6 +61,13 @@ private:
         return *this;
     }
 
+    BigFloat oneDivideByThis() {
+        mantissa = 1. / mantissa;
+        exponent *= -1;
+        setupPrecision();
+        return *this;
+    }
+
 
     bool equals(BigFloat _bigFloat) {
         setupPrecision();
@@ -77,7 +85,7 @@ private:
 
 
     BigFloat getInstance() {
-        BigFloat bf;
+        BigFloat bf{0};
         bf.mantissa = mantissa;
         bf.exponent = exponent;
         bf.setupPrecision();
@@ -85,11 +93,13 @@ private:
     }
 
 public:
-    BigFloat(double _base = 0, double _exp = 0) {
+    BigFloat(double _base, double _exp = 0) {
         mantissa = _base * exp10(_exp - (double) (long) _exp);
         exponent = (long) _exp;
         setupPrecision();
     }
+
+    double log() { return (double) exponent + std::log(mantissa); }
 
     explicit operator float() {
         this->setupPrecision();
@@ -105,34 +115,38 @@ public:
         return mantissa * exp10((double) exponent);
     }
 
+    explicit operator std::string() {
+        std::ostringstream oss;
+        oss << mantissa << "E" << exponent;
+        return oss.str();
+    }
+
     BigFloat &operator=(float _float) {
         *this = BigFloat(_float);
         return *this;
     }
 
-    bool operator==(float _float) { return this->equals(BigFloat(_float)); }
+    bool operator==(BigFloat _bigFloat) { return this->equals(_bigFloat); }
 
-    bool operator!=(float _float) { return not(*this == _float); }
+    bool operator!=(BigFloat _bigFloat) { return not(*this == _bigFloat); }
+
+    BigFloat operator+(BigFloat _bigFloat) { return this->getInstance().add(_bigFloat); }
 
     BigFloat operator*(BigFloat _bigFloat) { return this->getInstance().multiplyBy(_bigFloat); }
 
-    BigFloat operator*(float _float) { return this->getInstance().multiplyBy(BigFloat(_float)); }
-
-    BigFloat operator/(float _float) { return this->getInstance().multiplyBy(BigFloat(1 / _float)); }
-
-    void operator+=(float _float) { this->add(BigFloat(_float)); }
+    BigFloat operator/(BigFloat _bigFloat) {
+        return this->getInstance().multiplyBy(_bigFloat.getInstance().oneDivideByThis());
+    }
 
     void operator+=(BigFloat _bigFloat) { this->add(_bigFloat); }
 
-    void operator-=(float _float) { this->add(BigFloat(-_float)); }
-
     void operator-=(BigFloat _bigFloat) { this->add(_bigFloat * -1); }
-
-    void operator*=(float _float) { this->multiplyBy(BigFloat(_float)); }
 
     void operator*=(BigFloat _bigFloat) { this->multiplyBy(_bigFloat); }
 
-    bool operator>(float _float) { return this->moreThan(BigFloat(_float)); }
+    bool operator>(BigFloat _bigFloat) { return this->moreThan(_bigFloat); }
+
+    bool operator<(BigFloat _bigFloat) { return not(*this == _bigFloat) and not(*this > _bigFloat); }
 };
 
 

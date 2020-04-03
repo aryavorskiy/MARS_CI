@@ -26,6 +26,10 @@ private:
     int set_size = 0;
     T *set_values = nullptr;
     std::vector<LinkedSet> linked_sets{};
+    std::vector<BigFloat> probabilities{}, inv_probabilities{};
+
+    BigFloat interactionMeanField(int spin_index, BigFloat interaction_multiplier);
+
 public:
     SetType set_type = EMPTY;
 
@@ -47,6 +51,12 @@ public:
      * @param linked_set Set object to link to
      */
     void createLink(Set<T> &linked_set);
+
+    /**
+     * Recalculate all stored equality probability values.
+     * Call every time before performing a sweep on all spins
+     */
+    void recalculateProbabilities();
 
     /**
     * Get spin from specified index.
@@ -97,7 +107,28 @@ T Set<T>::operator[](int index) {
 
 template<typename T>
 void Set<T>::setSpin(int index, T value) {
+    for (unsigned int link_index = 0; link_index < linked_sets.size(); ++link_index) {
+        probabilities[link_index] *=
+                (1 + (*linked_sets[link_index])[index] * value) /
+                (1 + (*linked_sets[link_index])[index] * set_values[index]);
+        inv_probabilities[link_index] *=
+                (1 - (*linked_sets[link_index])[index] * value) /
+                (1 - (*linked_sets[link_index])[index] * set_values[index]);
+    }
     set_values[index] = value;
+}
+
+template<typename T>
+void Set<T>::recalculateProbabilities() {
+    for (unsigned int link_index = 0; link_index < linked_sets.size(); ++link_index) {
+        BigFloat prob{1}, inv_prob{1};
+        for (int spin_index = 0; spin_index < set_size; ++spin_index) {
+            prob *= (1 + (*linked_sets[link_index])[spin_index] * set_values[spin_index]) / 2.;
+            inv_prob *= (1 - (*linked_sets[link_index])[spin_index] * set_values[spin_index]) / 2;
+        }
+        probabilities[link_index] = prob;
+        inv_probabilities[link_index] = inv_prob;
+    }
 }
 
 template<typename T>
@@ -113,30 +144,43 @@ T Set<T>::hamiltonian(Lattice<T> lattice) {
 }
 
 template<typename T>
-BigFloat Set<T>::meanField(int spin_index, Lattice<T> lattice, BigFloat interaction_multiplier) {
-    BigFloat mean_field{};
-
-    // Set interaction in block
-    if (interaction_multiplier != 0) {
-        for (LinkedSet linked_set : linked_sets) {
-            mean_field += interaction_multiplier * (float) (0.5 * logf(
-                    (1 + (*linked_set)[spin_index]) /
-                    (1 - (*linked_set)[spin_index])
-            ));
-        }
+BigFloat Set<T>::interactionMeanField(int spin_index, BigFloat interaction_multiplier) {
+    BigFloat interaction_mean_field{0};
+    for (unsigned int link_index = 0; link_index < linked_sets.size(); ++link_index) {
+        interaction_mean_field += interaction_multiplier * (0.5 * (
+                (probabilities[link_index] * (1 + (*linked_sets[link_index])[spin_index]) /
+                 (1 + (*linked_sets[link_index])[spin_index] * set_values[spin_index]) +
+                 inv_probabilities[link_index] * (1 - (*linked_sets[link_index])[spin_index]) /
+                 (1 - (*linked_sets[link_index])[spin_index] * set_values[spin_index])) /
+                //-----------------------------------------------------------------------
+                (probabilities[link_index] * (1 - (*linked_sets[link_index])[spin_index]) /
+                 (1 + (*linked_sets[link_index])[spin_index] * set_values[spin_index]) +
+                 inv_probabilities[link_index] * (1 + (*linked_sets[link_index])[spin_index]) /
+                 (1 - (*linked_sets[link_index])[spin_index] * set_values[spin_index]))
+        ).log());
     }
+    return interaction_mean_field;
+}
+
+template<typename T>
+BigFloat Set<T>::meanField(int spin_index, Lattice<T> lattice, BigFloat interaction_multiplier) {
+    BigFloat interaction_mean_field =
+            interaction_multiplier == 0 ? 0 : interactionMeanField(spin_index, interaction_multiplier);
 
     // Spin interaction in set
+    double spin_mean_field = 0;
     for (int i = 0; i < set_size; ++i) {
         if (i != spin_index)
-            mean_field += set_values[i] * lattice(i, spin_index);
+            spin_mean_field += set_values[i] * lattice(i, spin_index);
     }
-    return mean_field;
+    return interaction_mean_field + BigFloat(spin_mean_field);
 }
 
 template<typename T>
 void Set<T>::createLink(Set<T> &linked_set) {
     linked_sets.emplace_back(&linked_set);
+    probabilities.push_back(BigFloat{1});
+    inv_probabilities.push_back(BigFloat{1});
 }
 
 template<typename T>

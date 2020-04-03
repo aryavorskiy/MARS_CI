@@ -46,7 +46,7 @@ struct AnnealingRun {
     void anneal();
 };
 
-const float threshold = 0.001;
+constexpr float threshold = 0.001;
 
 template<typename T>
 Set<T> AnnealingRun<T>::operator[](int index) {
@@ -59,12 +59,13 @@ void AnnealingRun<T>::annealingStep() {
     while (proceed_iteration) {
         proceed_iteration = false;
         for (int set_index = 0; set_index < block.set_count; ++set_index) {
+            block[set_index].recalculateProbabilities();
             for (int spin_index = 0; spin_index < block.setSize(); ++spin_index) {
-                BigFloat mean_field;
-                if (temperature > temperature_threshold)
-                    mean_field = block.meanField(lattice, set_index, spin_index, interaction_multiplier);
+                BigFloat mean_field{0};
+                if (temperature > temperature_threshold and temperature > 0)
+                    mean_field = block[set_index].meanField(spin_index, lattice, interaction_multiplier);
                 else
-                    mean_field = block.meanField(lattice, set_index, spin_index, BigFloat(0));
+                    mean_field = block[set_index].meanField(spin_index, lattice, BigFloat(0));
                 T new_spin_value;
                 if (temperature > 0)
                     new_spin_value = tanh((T) (mean_field / -temperature));
@@ -76,8 +77,8 @@ void AnnealingRun<T>::annealingStep() {
                 block.setSpin(set_index, spin_index, new_spin_value);
             }
         }
+        step_counter++;
     }
-    step_counter++;
 }
 
 template<typename T>
