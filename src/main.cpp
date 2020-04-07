@@ -10,7 +10,7 @@
 #include "AnnealingRun.h"
 
 #define VERSION "3.4"
-#define BUILD 5
+#define BUILD 14
 #define NO_INPUT // Uncomment to disable parameter input
 
 /*
@@ -150,7 +150,7 @@ int main() {
 
     // Load block
     std::string block_filename = "4";
-    int block_count = 10;
+    int block_count = 2;
 #ifndef NO_INPUT
     std::cout << "Block file location (Enter block size to create a random block)?" << std::endl;
     std::cin >> block_filename;

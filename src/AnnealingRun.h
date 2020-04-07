@@ -59,7 +59,8 @@ void AnnealingRun<T>::annealingStep() {
     while (proceed_iteration) {
         proceed_iteration = false;
         for (int set_index = 0; set_index < block.set_count; ++set_index) {
-            block[set_index].recalculateProbabilities();
+            for (int link_index = 0; link_index < block[set_index].linkedSets(); ++link_index)
+                block[set_index].recalculateProbabilities(link_index);
             for (int spin_index = 0; spin_index < block.setSize(); ++spin_index) {
                 BigFloat mean_field{0};
                 if (temperature > temperature_threshold and temperature > 0)

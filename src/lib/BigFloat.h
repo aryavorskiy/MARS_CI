@@ -19,7 +19,7 @@ private:
     long exponent;
 
     void setupPrecision() {
-        if (mantissa == 0 || std::isinf(mantissa)) {
+        if (mantissa == 0 or std::isinf(mantissa)) {
             exponent = 0;
             return;
         }
@@ -34,8 +34,6 @@ private:
     }
 
     BigFloat add(BigFloat _bigFloat) {
-        setupPrecision();
-        _bigFloat.setupPrecision();
         if (_bigFloat.mantissa == 0)
             return *this;
         if (mantissa == 0) {
@@ -70,14 +68,10 @@ private:
 
 
     bool equals(BigFloat _bigFloat) {
-        setupPrecision();
-        _bigFloat.setupPrecision();
-        return _bigFloat.mantissa == mantissa && _bigFloat.exponent == exponent;
+        return _bigFloat.mantissa == mantissa and _bigFloat.exponent == exponent;
     }
 
     bool moreThan(BigFloat _bigFloat) {
-        setupPrecision();
-        _bigFloat.setupPrecision();
         return mantissa * _bigFloat.mantissa <= 0 ? mantissa > _bigFloat.mantissa :
                exponent > _bigFloat.exponent ? true :
                _bigFloat.exponent > exponent ? false : mantissa > _bigFloat.mantissa;
@@ -88,12 +82,16 @@ private:
         BigFloat bf{0};
         bf.mantissa = mantissa;
         bf.exponent = exponent;
-        bf.setupPrecision();
         return bf;
     }
 
 public:
     BigFloat(double _base, double _exp = 0) {
+        if (_base == 0) {
+            mantissa = _base;
+            exponent = 0;
+            return;
+        }
         mantissa = _base * exp10(_exp - (double) (long) _exp);
         exponent = (long) _exp;
         setupPrecision();

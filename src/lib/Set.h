@@ -56,7 +56,7 @@ public:
      * Recalculate all stored equality probability values.
      * Call every time before performing a sweep on all spins
      */
-    void recalculateProbabilities();
+    void recalculateProbabilities(int link_index);
 
     /**
     * Get spin from specified index.
@@ -91,6 +91,12 @@ public:
      * @return Spin count
      */
     int size();
+
+    /**
+     * Get linked set count of set.
+     * @return Linked set count
+     */
+    int linkedSets();
 };
 
 template<typename T>
@@ -107,28 +113,36 @@ T Set<T>::operator[](int index) {
 
 template<typename T>
 void Set<T>::setSpin(int index, T value) {
+    if (value == set_values[index])
+        return;
     for (unsigned int link_index = 0; link_index < linked_sets.size(); ++link_index) {
-        probabilities[link_index] *=
-                (1 + (*linked_sets[link_index])[index] * value) /
-                (1 + (*linked_sets[link_index])[index] * set_values[index]);
-        inv_probabilities[link_index] *=
-                (1 - (*linked_sets[link_index])[index] * value) /
-                (1 - (*linked_sets[link_index])[index] * set_values[index]);
+        if (std::fabs(value) == 1 and std::fabs(set_values[index]) == 1) {
+            // Prevent zero division
+            recalculateProbabilities(link_index);
+            continue;
+        }
+        if (probabilities[link_index] != 0)
+            probabilities[link_index] *=
+                    (1 + (*linked_sets[link_index])[index] * value) /
+                    (1 + (*linked_sets[link_index])[index] * set_values[index]);
+        if (inv_probabilities[link_index] != 0)
+            inv_probabilities[link_index] *=
+                    (1 - (*linked_sets[link_index])[index] * value) /
+                    (1 - (*linked_sets[link_index])[index] * set_values[index]);
     }
     set_values[index] = value;
 }
 
 template<typename T>
-void Set<T>::recalculateProbabilities() {
-    for (unsigned int link_index = 0; link_index < linked_sets.size(); ++link_index) {
-        BigFloat prob{1}, inv_prob{1};
-        for (int spin_index = 0; spin_index < set_size; ++spin_index) {
-            prob *= (1 + (*linked_sets[link_index])[spin_index] * set_values[spin_index]) / 2.;
-            inv_prob *= (1 - (*linked_sets[link_index])[spin_index] * set_values[spin_index]) / 2;
-        }
-        probabilities[link_index] = prob;
-        inv_probabilities[link_index] = inv_prob;
+void Set<T>::recalculateProbabilities(int link_index) {
+    BigFloat prob{1}, inv_prob{1};
+    for (int spin_index = 0; spin_index < set_size; ++spin_index) {
+        prob *= (1 + (*linked_sets[link_index])[spin_index] * set_values[spin_index]) / 2.;
+        inv_prob *= (1 - (*linked_sets[link_index])[spin_index] * set_values[spin_index]) / 2;
     }
+    probabilities[link_index] = prob;
+    inv_probabilities[link_index] = inv_prob;
+
 }
 
 template<typename T>
@@ -147,12 +161,18 @@ template<typename T>
 BigFloat Set<T>::interactionMeanField(int spin_index, BigFloat interaction_multiplier) {
     BigFloat interaction_mean_field{0};
     for (unsigned int link_index = 0; link_index < linked_sets.size(); ++link_index) {
+        if (probabilities[link_index] == 0 and inv_probabilities[link_index] == 0)
+            // Set equality impossible - continue
+            continue;
+        if (std::fabs((*linked_sets[link_index])[spin_index]) == 1)
+            // Linked set spin is \pm 1 - continue
+            continue;
         interaction_mean_field += interaction_multiplier * (0.5 * (
                 (probabilities[link_index] * (1 + (*linked_sets[link_index])[spin_index]) /
                  (1 + (*linked_sets[link_index])[spin_index] * set_values[spin_index]) +
                  inv_probabilities[link_index] * (1 - (*linked_sets[link_index])[spin_index]) /
-                 (1 - (*linked_sets[link_index])[spin_index] * set_values[spin_index])) /
-                //-----------------------------------------------------------------------
+                 (1 - (*linked_sets[link_index])[spin_index] * set_values[spin_index]))
+                /  //-----------------------------------------------------------------------
                 (probabilities[link_index] * (1 - (*linked_sets[link_index])[spin_index]) /
                  (1 + (*linked_sets[link_index])[spin_index] * set_values[spin_index]) +
                  inv_probabilities[link_index] * (1 + (*linked_sets[link_index])[spin_index]) /
@@ -185,5 +205,10 @@ void Set<T>::createLink(Set<T> &linked_set) {
 
 template<typename T>
 int Set<T>::size() { return set_size; }
+
+template<typename T>
+int Set<T>::linkedSets() {
+    return linked_sets.size();
+}
 
 #endif //MARS_CI_SET_H

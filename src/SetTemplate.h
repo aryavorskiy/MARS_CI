@@ -39,7 +39,7 @@ public:
      * @param size Spin count in set
      * @param line String with spin values
      */
-    GivenSetTemplate(int size, std::string line) : set_size(size), set_values(new T[size]) {
+    GivenSetTemplate(int size, const std::string &line) : set_size(size), set_values(new T[size]) {
         auto in = std::istringstream(line);
         for (int i = 0; i < set_size; ++i) {
             T buf;

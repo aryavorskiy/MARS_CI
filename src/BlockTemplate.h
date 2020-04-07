@@ -87,7 +87,7 @@ void BlockTemplate<T>::loadLinks(const std::string &link_filename) {
         if (line.empty()) {
             // Ignore empty line
             link_index--;
-        } else if (line == "EMPTY" || line == "NONE") {
+        } else if (line == "EMPTY" or line == "NONE") {
             // Set interacts with no others
         } else if (line == "ALL") {
             // Set interacts with every other except himself
@@ -103,7 +103,7 @@ void BlockTemplate<T>::loadLinks(const std::string &link_filename) {
             for (int j = 0; j < block_size; ++j) {
                 int buf = 0;
                 line_parser >> buf;
-                if (link.empty() || std::find(link.begin(), link.end(), buf) == link.end())
+                if (link.empty() or std::find(link.begin(), link.end(), buf) == link.end())
                     // Duplicates are ignored
                     link.push_back(buf);
             }
