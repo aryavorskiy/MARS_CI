@@ -59,22 +59,31 @@ void AnnealingRun<T>::annealingStep() {
     while (proceed_iteration) {
         proceed_iteration = false;
         for (int set_index = 0; set_index < block.set_count; ++set_index) {
+            // Update stored probability values
             for (int link_index = 0; link_index < block[set_index].linkedSets(); ++link_index)
                 block[set_index].recalculateProbabilities(link_index);
+
             for (int spin_index = 0; spin_index < block.setSize(); ++spin_index) {
+                // Calculate mean field
                 BigFloat mean_field{0};
                 if (temperature > temperature_threshold and temperature > 0)
                     mean_field = block[set_index].meanField(spin_index, lattice, interaction_multiplier);
                 else
                     mean_field = block[set_index].meanField(spin_index, lattice, BigFloat(0));
+
+                // Calculate new spin value
                 T new_spin_value;
                 if (temperature > 0)
                     new_spin_value = tanh((T) (mean_field / -temperature));
                 else
                     new_spin_value = mean_field > 0 ? -1 : 1;
+
+                // Check threshold
                 T old_spin_value = block[set_index][spin_index];
                 if (fabs(new_spin_value - old_spin_value) > threshold)
                     proceed_iteration = true;
+
+                // Write spin value
                 block.setSpin(set_index, spin_index, new_spin_value);
             }
         }

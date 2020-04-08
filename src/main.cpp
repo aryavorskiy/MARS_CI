@@ -10,8 +10,8 @@
 #include "AnnealingRun.h"
 
 #define VERSION "3.4"
-#define BUILD 14
-#define NO_INPUT // Uncomment to disable parameter input
+#define BUILD 15
+// #define NO_INPUT // Uncomment to disable parameter input (useful for debugging)
 
 /*
  * TERMINOLOGY:
@@ -195,12 +195,6 @@ int main() {
     std::cout << "File to save all results (NONE for no saving)?" << std::endl;
     std::cin >> results_filename;
 #endif
-
-    if (results_filename != "NONE") {
-        auto file_stream = std::ofstream(results_filename, std::ios::out);
-        file_stream << "Now set will be annealed with following lattice:\n" << lattice << std::endl;
-        file_stream.close();
-    }
 
     // Start annealing
     auto *threads_arr = new std::thread[block_count];

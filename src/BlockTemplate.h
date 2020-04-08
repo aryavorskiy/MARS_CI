@@ -124,6 +124,7 @@ BlockTemplate<T>::BlockTemplate(int _set_size, const std::string &block_filename
     for (int set_index = 0; set_index < set_count; ++set_index) {
         // Read the block file
         getline(ifs, line);
+
         if (line.empty()) {
             // Ignore empty line
             set_index--;

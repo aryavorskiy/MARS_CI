@@ -43,7 +43,7 @@ public:
      * @param block_values Spin values array pointer
      * @param links Link array pointer
      */
-    Block(int set_count, Set<T> *sets, SetLink *links);;
+    Block(int set_count, Set<T> *sets, SetLink *links);
 
     /**
      * Get Set from specified index.
