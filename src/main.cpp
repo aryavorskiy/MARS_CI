@@ -10,7 +10,7 @@
 #include "AnnealingRun.h"
 
 #define VERSION "3.4"
-#define BUILD 15
+#define BUILD 16
 // #define NO_INPUT // Uncomment to disable parameter input (useful for debugging)
 
 /*
@@ -113,7 +113,7 @@ int main() {
     std::cout << "MARS analysis by A. Yavorski, CPU edition, version " << VERSION << ", build " << BUILD << std::endl;
 
     // Load temperature bounds
-    float temp_start = 5, temp_final = 10, annealing_step = 0.1;
+    float temp_start = 6, temp_final = 8.5, annealing_step = 0.1;
 #ifndef NO_INPUT
     std::cout << "Start temp?" << std::endl;
     std::cin >> temp_start;
@@ -150,7 +150,7 @@ int main() {
 
     // Load block
     std::string block_filename = "4";
-    int block_count = 2;
+    int block_count = 50;
 #ifndef NO_INPUT
     std::cout << "Block file location (Enter block size to create a random block)?" << std::endl;
     std::cin >> block_filename;

@@ -23,6 +23,8 @@ template<typename T>
 class Set {
     typedef std::shared_ptr<Set<T>> LinkedSet;
 private:
+    static constexpr T delta = 0.01;
+
     int set_size = 0;
     T *set_values = nullptr;
     std::vector<LinkedSet> linked_sets{};
@@ -155,9 +157,6 @@ template<typename T>
 BigFloat Set<T>::interactionMeanField(int spin_index, BigFloat interaction_multiplier) {
     BigFloat interaction_mean_field{0};
     for (unsigned int link_index = 0; link_index < linked_sets.size(); ++link_index) {
-        if (probabilities[link_index] == 0 and inv_probabilities[link_index] == 0)
-            // Set equality impossible - continue
-            continue;
         if (std::fabs((*linked_sets[link_index])[spin_index]) == 1)
             // Linked set spin is \pm 1 - continue
             continue;
@@ -165,12 +164,12 @@ BigFloat Set<T>::interactionMeanField(int spin_index, BigFloat interaction_multi
                 (probabilities[link_index] * (1 + (*linked_sets[link_index])[spin_index]) /
                  (1 + (*linked_sets[link_index])[spin_index] * set_values[spin_index]) +
                  inv_probabilities[link_index] * (1 - (*linked_sets[link_index])[spin_index]) /
-                 (1 - (*linked_sets[link_index])[spin_index] * set_values[spin_index]))
+                 (1 - (*linked_sets[link_index])[spin_index] * set_values[spin_index]) + delta)
                 /  //-----------------------------------------------------------------------
                 (probabilities[link_index] * (1 - (*linked_sets[link_index])[spin_index]) /
                  (1 + (*linked_sets[link_index])[spin_index] * set_values[spin_index]) +
                  inv_probabilities[link_index] * (1 + (*linked_sets[link_index])[spin_index]) /
-                 (1 - (*linked_sets[link_index])[spin_index] * set_values[spin_index]))
+                 (1 - (*linked_sets[link_index])[spin_index] * set_values[spin_index]) + delta)
         ).log());
     }
     return interaction_mean_field;
