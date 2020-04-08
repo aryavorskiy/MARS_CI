@@ -10,7 +10,7 @@
 #include "AnnealingRun.h"
 
 #define VERSION "3.4"
-#define BUILD 16
+#define BUILD 17
 // #define NO_INPUT // Uncomment to disable parameter input (useful for debugging)
 
 /*

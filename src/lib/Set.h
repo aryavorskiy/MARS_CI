@@ -5,6 +5,8 @@
 #ifndef MARS_CI_SET_H
 #define MARS_CI_SET_H
 
+#define FORMULA_SYM
+
 #include "Lattice.h"
 
 enum SetType {
@@ -31,6 +33,7 @@ private:
     std::vector<BigFloat> probabilities{}, inv_probabilities{};
 
     BigFloat interactionMeanField(int spin_index, BigFloat interaction_multiplier);
+
 public:
     SetType set_type = EMPTY;
 
@@ -156,11 +159,12 @@ void Set<T>::recalculateProbabilities(int link_index) {
 template<typename T>
 BigFloat Set<T>::interactionMeanField(int spin_index, BigFloat interaction_multiplier) {
     BigFloat interaction_mean_field{0};
+#ifdef FORMULA_SYM
     for (unsigned int link_index = 0; link_index < linked_sets.size(); ++link_index) {
         if (std::fabs((*linked_sets[link_index])[spin_index]) == 1)
             // Linked set spin is \pm 1 - continue
             continue;
-        interaction_mean_field += interaction_multiplier * (0.5 * (
+        interaction_mean_field += interaction_multiplier * 0.5 * (
                 (probabilities[link_index] * (1 + (*linked_sets[link_index])[spin_index]) /
                  (1 + (*linked_sets[link_index])[spin_index] * set_values[spin_index]) +
                  inv_probabilities[link_index] * (1 - (*linked_sets[link_index])[spin_index]) /
@@ -170,8 +174,20 @@ BigFloat Set<T>::interactionMeanField(int spin_index, BigFloat interaction_multi
                  (1 + (*linked_sets[link_index])[spin_index] * set_values[spin_index]) +
                  inv_probabilities[link_index] * (1 + (*linked_sets[link_index])[spin_index]) /
                  (1 - (*linked_sets[link_index])[spin_index] * set_values[spin_index]) + delta)
-        ).log());
+        ).log();
     }
+#endif
+
+#ifdef FORMULA_ASYM
+    for (unsigned int link_index = 0; link_index < linked_sets.size(); ++link_index) {
+        if (std::fabs((*linked_sets[link_index])[spin_index]) == 1)
+            // Linked set spin is \pm 1 - continue
+            continue;
+        interaction_mean_field += interaction_multiplier * 0.5 * BigFloat{
+                (1 + (*linked_sets[link_index])[spin_index]) / (1 - (*linked_sets[link_index])[spin_index])
+        }.log();
+    }
+#endif
     return interaction_mean_field;
 }
 
